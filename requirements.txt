@@ -4,8 +4,6 @@ pandas
 yfinance
 scipy
 pypfopt
-cvxpy
-osqp
 plotly
 fpdf2
 matplotlib
