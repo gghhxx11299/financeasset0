@@ -5,7 +5,6 @@ import yfinance as yf
 from scipy.optimize import minimize
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import math
 from scipy.stats import norm, percentileofscore
@@ -19,100 +18,103 @@ from matplotlib.ticker import FuncFormatter
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
-# Custom CSS for the entire application
+# Custom CSS for professional look
 st.markdown("""
 <style>
-    .welcome-header {
-        font-size: 2.5rem;
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .option-button {
-        background-color: #3498db;
-        color: white;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-size: 1.1rem;
-        margin: 0.5rem;
-        width: 100%;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    .option-button:hover {
-        background-color: #2980b9;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .main-container {
-        max-width: 800px;
+    /* Main container styling */
+    .main {
+        max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #343a40;
-        color: white;
-        text-align: center;
-        padding: 10px;
-        font-size: 14px;
-    }
-    .metric-card {
-        background-color: white;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .plot-container {
-        background-color: white;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+    
+    /* Header styling */
     .header {
         color: #2c3e50;
-        font-weight: bold;
-        margin-bottom: 15px;
+        font-size: 2.2rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #e1e4e8;
+        padding-bottom: 0.5rem;
     }
-    .back-button {
-        background-color: #6c757d;
-        color: white;
-        margin-top: 20px;
+    
+    /* Card styling */
+    .card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
     }
-    .back-button:hover {
-        background-color: #5a6268;
+    
+    /* Metric card styling */
+    .metric-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #3498db;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
     }
+    
+    /* Button styling */
     .stButton>button {
-        background-color: #4CAF50;
+        background-color: #3498db;
         color: white;
-        font-weight: bold;
-        border-radius: 5px;
+        border: none;
+        border-radius: 4px;
         padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
     }
+    
     .stButton>button:hover {
-        background-color: #45a049;
+        background-color: #2980b9;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .stSelectbox>div>div>select {
-        background-color: #f8f9fa;
-        border-radius: 5px;
+    
+    /* Input field styling */
+    .stTextInput>div>div>input, 
+    .stSelectbox>div>div>select,
+    .stNumberInput>div>div>input,
+    .stTextArea>div>div>textarea {
+        border: 1px solid #dfe1e5;
+        border-radius: 4px;
+        padding: 0.5rem;
     }
-    .stTextInput>div>div>input {
+    
+    /* Tab styling */
+    .stTabs [role=tablist] {
         background-color: #f8f9fa;
-        border-radius: 5px;
+        border-radius: 4px;
     }
-    .stNumberInput>div>div>input {
-        background-color: #f8f9fa;
-        border-radius: 5px;
+    
+    .stTabs [role=tab][aria-selected=true] {
+        background-color: #3498db;
+        color: white;
+        border-radius: 4px;
     }
-    .stExpander>div {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
+    
+    /* Dataframe styling */
+    .stDataFrame {
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Footer styling */
+    .footer {
+        text-align: center;
+        padding: 1rem;
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        border-top: 1px solid #e1e4e8;
+        margin-top: 2rem;
+    }
+    
+    /* Error message styling */
+    .stAlert {
+        border-radius: 4px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -123,25 +125,25 @@ if 'current_page' not in st.session_state:
 
 # --- Sector ETFs ---
 SECTOR_MAP = {
-    "technology": ["XLK", "VGT", "QTEC"],
-    "financial": ["XLF", "VFH", "IYF"],
-    "energy": ["XLE", "VDE", "IXC"],
-    "healthcare": ["XLV", "IBB", "VHT"],
-    "consumer discretionary": ["XLY", "VCR", "FDIS"],
-    "consumer staples": ["XLP", "VDC", "FSTA"],
-    "industrial": ["XLI", "VIS", "VMI"],
-    "utilities": ["XLU", "VPU"],
-    "real estate": ["XLRE", "VNQ", "SCHH"],
-    "materials": ["XLB", "VAW"],
-    "agriculture": ["DBA", "COW", "MOO"],
-    "gold": ["GLD", "IAU", "SGOL"],
-    "oil": ["USO", "OIH", "XOP"],
-    "cryptocurrency": ["BTC-USD", "ETH-USD", "GBTC"],
-    "bonds": ["AGG", "BND", "LQD"],
-    "semiconductors": ["SMH", "SOXX"],
-    "retail": ["XRT", "RTH"],
-    "telecommunications": ["XTL", "VOX"],
-    "transportation": ["IYT", "XTN"],
+    "Technology": ["XLK", "VGT", "QTEC"],
+    "Financial": ["XLF", "VFH", "IYF"],
+    "Energy": ["XLE", "VDE", "IXC"],
+    "Healthcare": ["XLV", "IBB", "VHT"],
+    "Consumer Discretionary": ["XLY", "VCR", "FDIS"],
+    "Consumer Staples": ["XLP", "VDC", "FSTA"],
+    "Industrial": ["XLI", "VIS", "VMI"],
+    "Utilities": ["XLU", "VPU"],
+    "Real Estate": ["XLRE", "VNQ", "SCHH"],
+    "Materials": ["XLB", "VAW"],
+    "Agriculture": ["DBA", "COW", "MOO"],
+    "Gold": ["GLD", "IAU", "SGOL"],
+    "Oil": ["USO", "OIH", "XOP"],
+    "Cryptocurrency": ["BTC-USD", "ETH-USD", "GBTC"],
+    "Bonds": ["AGG", "BND", "LQD"],
+    "Semiconductors": ["SMH", "SOXX"],
+    "Retail": ["XRT", "RTH"],
+    "Telecommunications": ["XTL", "VOX"],
+    "Transportation": ["IYT", "XTN"],
 }
 
 # --- Pricing Models ---
@@ -230,15 +232,16 @@ def implied_volatility(option_market_price, S, K, T, r, option_type="call", tol=
 # --- Market Data Functions ---
 def get_option_market_price(ticker, option_type, strike, expiry_date):
     """Fetch current market price for given option"""
-    stock = yf.Ticker(ticker)
     try:
+        stock = yf.Ticker(ticker)
         if expiry_date not in stock.options:
             return None
         opt_chain = stock.option_chain(expiry_date)
         options = opt_chain.calls if option_type == "call" else opt_chain.puts
         row = options[options['strike'] == strike]
         return None if row.empty else float(row.iloc[0]['lastPrice'])
-    except:
+    except Exception as e:
+        st.error(f"Error fetching option data: {str(e)}")
         return None
 
 def get_us_10yr_treasury_yield():
@@ -259,7 +262,8 @@ def get_us_10yr_treasury_yield():
 
         latest_yield_str = df["10 Yr"].iloc[-1]
         return float(latest_yield_str) / 100
-    except Exception:
+    except Exception as e:
+        st.warning(f"Couldn't fetch Treasury yield, using fallback: {str(e)}")
         return fallback_yield
 
 # --- Volatility Analysis ---
@@ -272,104 +276,50 @@ def calculate_iv_percentile(ticker, current_iv, lookback_days=365):
         
         return float(percentileofscore([realized_vol], current_iv))
     except Exception as e:
-        st.warning(f"Could not calculate IV percentile: {e}")
+        st.warning(f"Could not calculate IV percentile: {str(e)}")
         return None
 
 def plot_stock_volume(ticker, days_to_expiry):
-    """Plot stock/ETF trading volume - handles both simple and MultiIndex DataFrames"""
+    """Plot stock/ETF trading volume"""
     try:
-        # 1. Fetch data with multiple fallback attempts
-        stock_data = None
-        fetch_attempts = [
-            {'auto_adjust': True, 'actions': False},
-            {'auto_adjust': False, 'actions': False},
-            {'auto_adjust': True, 'actions': True},
-            {'auto_adjust': False, 'actions': True}
-        ]
+        stock_data = yf.download(
+            ticker,
+            period=f"{min(days_to_expiry, 365)}d",
+            progress=False
+        )
         
-        for attempt in fetch_attempts:
-            try:
-                stock_data = yf.download(
-                    ticker,
-                    period=f"{min(days_to_expiry, 365)}d",
-                    progress=False,
-                    **attempt
-                )
-                if isinstance(stock_data, pd.DataFrame) and not stock_data.empty:
-                    break
-            except:
-                continue
-
-        # 2. Validate data structure
-        if not isinstance(stock_data, pd.DataFrame) or stock_data.empty:
-            st.warning(f"⚠️ No market data available for {ticker}")
+        if stock_data.empty:
+            st.warning(f"No data available for {ticker}")
             return None
 
-        # 3. Find volume column (handles both regular and MultiIndex columns)
-        volume_col = None
-        for col in stock_data.columns:
-            # Case 1: Simple string column name (e.g., 'Volume')
-            if isinstance(col, str) and 'volume' in col.lower():
-                volume_col = col
-                break
-            # Case 2: MultiIndex tuple column (e.g., ('Volume', 'SPY'))
-            elif isinstance(col, tuple) and any('volume' in str(s).lower() for s in col):
-                volume_col = col
-                break
-
-        if not volume_col:
-            st.warning(f"📊 Volume data missing for {ticker} (Available columns: {stock_data.columns.tolist()})")
-            return None
-
-        # 4. Clean data
-        clean_data = stock_data[[volume_col]].dropna()
-        if clean_data.empty:
-            st.warning(f"🧹 No valid volume data after cleaning for {ticker}")
-            return None
-
-        # 5. Create plot
         fig = go.Figure()
         fig.add_trace(go.Bar(
-            x=clean_data.index,
-            y=clean_data[volume_col],
-            marker_color='#1f77b4',
+            x=stock_data.index,
+            y=stock_data['Volume'],
+            marker_color='#3498db',
             hovertemplate="<b>Date</b>: %{x|%b %d}<br><b>Volume</b>: %{y:,}<extra></extra>"
         ))
         
-        # Add average line if we have valid data
-        try:
-            avg_volume = clean_data[volume_col].mean()
-            fig.add_shape(
-                type="line",
-                x0=clean_data.index[0],
-                x1=clean_data.index[-1],
-                y0=avg_volume,
-                y1=avg_volume,
-                line=dict(color='#ff7f0e', dash='dot')
-            )
-            fig.add_annotation(
-                x=clean_data.index[-1],
-                y=avg_volume,
-                text=f"Avg: {avg_volume:,.0f}",
-                showarrow=False,
-                xanchor='right',
-                yanchor='bottom',
-                font=dict(color="#ff7f0e")
-            )
-        except:
-            pass
+        avg_volume = stock_data['Volume'].mean()
+        fig.add_shape(
+            type="line",
+            x0=stock_data.index[0],
+            x1=stock_data.index[-1],
+            y0=avg_volume,
+            y1=avg_volume,
+            line=dict(color='#e74c3c', dash='dot')
+        )
         
         fig.update_layout(
-            title=f"<b>{ticker} Volume</b> | Last {len(clean_data)} Trading Days",
-            yaxis_title="Shares Traded",
+            title=f"<b>{ticker} Trading Volume</b>",
+            yaxis_title="Volume",
             template="plotly_white",
             hovermode="x unified"
         )
         
         return fig
-
     except Exception as e:
-        st.error(f"❌ Error processing {ticker}: {str(e)}")
+        st.error(f"Error plotting volume: {str(e)}")
         return None
 
 def plot_black_scholes_sensitivities(S, K, T, r, sigma, option_type):
@@ -385,9 +335,9 @@ def plot_black_scholes_sensitivities(S, K, T, r, sigma, option_type):
         x=S_range, 
         y=prices_S, 
         name='Price vs Underlying',
-        line=dict(color='#636EFA'),
+        line=dict(color='#3498db'),
         fill='tozeroy',
-        fillcolor='rgba(99, 110, 250, 0.1)',
+        fillcolor='rgba(52, 152, 219, 0.1)',
         hovertemplate="<b>Stock Price</b>: $%{x:.2f}<br><b>Option Price</b>: $%{y:.2f}<extra></extra>"
     ), row=1, col=1)
     
@@ -397,9 +347,9 @@ def plot_black_scholes_sensitivities(S, K, T, r, sigma, option_type):
         x=T_range*365, 
         y=prices_T, 
         name='Price vs Days to Expiry',
-        line=dict(color='#EF553B'),
+        line=dict(color='#2ecc71'),
         fill='tozeroy',
-        fillcolor='rgba(239, 85, 59, 0.1)',
+        fillcolor='rgba(46, 204, 113, 0.1)',
         hovertemplate="<b>Days to Expiry</b>: %{x:.0f}<br><b>Option Price</b>: $%{y:.2f}<extra></extra>"
     ), row=2, col=1)
     
@@ -409,32 +359,32 @@ def plot_black_scholes_sensitivities(S, K, T, r, sigma, option_type):
         x=sigma_range*100, 
         y=prices_sigma, 
         name='Price vs Volatility',
-        line=dict(color='#00CC96'),
+        line=dict(color='#9b59b6'),
         fill='tozeroy',
-        fillcolor='rgba(0, 204, 150, 0.1)',
+        fillcolor='rgba(155, 89, 182, 0.1)',
         hovertemplate="<b>Volatility</b>: %{x:.2f}%<br><b>Option Price</b>: $%{y:.2f}<extra></extra>"
     ), row=3, col=1)
     
-    fig.add_vline(x=S, row=1, col=1, line=dict(color='#636EFA', dash='dash'), 
+    fig.add_vline(x=S, row=1, col=1, line=dict(color='#3498db', dash='dash'), 
                 annotation_text=f'Current Price: ${S:.2f}',
                 annotation_position="top right")
     
-    fig.add_vline(x=T*365, row=2, col=1, line=dict(color='#EF553B', dash='dash'), 
+    fig.add_vline(x=T*365, row=2, col=1, line=dict(color='#2ecc71', dash='dash'), 
                 annotation_text=f'Current DTE: {T*365:.0f} days',
                 annotation_position="top right")
     
-    fig.add_vline(x=sigma*100, row=3, col=1, line=dict(color='#00CC96', dash='dash'), 
+    fig.add_vline(x=sigma*100, row=3, col=1, line=dict(color='#9b59b6', dash='dash'), 
                 annotation_text=f'Current IV: {sigma*100:.2f}%',
                 annotation_position="top right")
     
     fig.update_layout(
         title=f'<b>Black-Scholes Sensitivities ({option_type.capitalize()} Option)</b>',
-        height=900,
+        height=800,
         showlegend=False,
         hovermode='x unified',
         template='plotly_white',
         margin=dict(l=50, r=50, b=50, t=100),
-        title_font=dict(size=20, color='#2c3e50'),
+        title_font=dict(size=18, color='#2c3e50'),
         plot_bgcolor='rgba(0,0,0,0)'
     )
     
@@ -586,7 +536,8 @@ def optimize_portfolio(returns, method='mpt', target_return=None):
 
 # --- Options Pricing Module ---
 def options_pricing_main():
-    st.title("Options Profit & Capital Advisor")
+    st.title("Options Pricing & Analysis")
+    st.markdown("Analyze option strategies and get trading recommendations based on market conditions.")
 
     # Initialize session state variables
     if "calculation_done" not in st.session_state:
@@ -611,28 +562,36 @@ def options_pricing_main():
         st.session_state.volume_fig = None
 
     # Input widgets
-    st.markdown("### Input Parameters")
-    with st.expander("Configure your option trade"):
+    with st.expander("Configure Option Trade", expanded=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            ticker = st.text_input("Stock Ticker (e.g. AAPL)", value="AAPL").upper()
-            option_type = st.selectbox("Option Type", ["call", "put"])
-            strike_price = st.number_input("Strike Price", min_value=0.0, value=150.0)
-            days_to_expiry = st.number_input("Days to Expiry", min_value=1, max_value=365, value=30)
-            risk_free_rate = st.number_input("Risk-Free Rate", min_value=0.0, max_value=1.0, value=0.025)
-            sector = st.selectbox("Sector", list(SECTOR_MAP.keys()))
+            ticker = st.text_input("Stock/ETF Ticker", value="AAPL", key="options_ticker").upper()
+            option_type = st.selectbox("Option Type", ["Call", "Put"], key="option_type")
+            strike_price = st.number_input("Strike Price", min_value=0.0, value=150.0, step=0.5, key="strike_price")
+            days_to_expiry = st.number_input("Days to Expiry", min_value=1, max_value=365, value=30, key="days_to_expiry")
+            sector = st.selectbox("Sector", sorted(SECTOR_MAP.keys()), key="sector")
             
         with col2:
-            return_type = st.selectbox("Return Type", ["Simple", "Log"])
-            comfortable_capital = st.number_input("Comfortable Capital ($)", min_value=0.0, value=1000.0)
-            max_capital = st.number_input("Max Capital ($)", min_value=0.0, value=5000.0)
-            min_capital = st.number_input("Min Capital ($)", min_value=0.0, value=500.0)
-            pricing_model = st.selectbox("Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
+            pricing_model = st.selectbox("Pricing Model", 
+                                       ["Black-Scholes", "Binomial Tree", "Monte Carlo"],
+                                       key="pricing_model")
+            risk_free_rate = st.number_input("Risk-Free Rate (%)", 
+                                           min_value=0.0, max_value=20.0, 
+                                           value=2.5, step=0.1, key="risk_free_rate") / 100
+            comfortable_capital = st.number_input("Comfortable Capital ($)", 
+                                                min_value=100.0, value=5000.0, 
+                                                step=100.0, key="comfortable_capital")
+            max_capital = st.number_input("Max Capital ($)", 
+                                        min_value=100.0, value=10000.0, 
+                                        step=100.0, key="max_capital")
+            min_capital = st.number_input("Min Capital ($)", 
+                                        min_value=100.0, value=1000.0, 
+                                        step=100.0, key="min_capital")
 
     # Calculation button
     st.markdown("---")
-    calculate_clicked = st.button("Calculate Profit & Advice", key="calculate")
+    calculate_clicked = st.button("Analyze Option", key="calculate_option")
 
     # When Calculate button is pressed
     if calculate_clicked:
@@ -641,12 +600,11 @@ def options_pricing_main():
                 # Store input data
                 st.session_state.input_data = {
                     "Stock Ticker": ticker,
-                    "Option Type": option_type,
+                    "Option Type": option_type.lower(),
                     "Strike Price": strike_price,
                     "Days to Expiry": days_to_expiry,
                     "Risk-Free Rate": risk_free_rate,
                     "Sector": sector,
-                    "Return Type": return_type,
                     "Comfortable Capital": comfortable_capital,
                     "Max Capital": max_capital,
                     "Min Capital": min_capital,
@@ -683,20 +641,20 @@ def options_pricing_main():
                     return
 
                 # Get market price and implied volatility
-                price_market = get_option_market_price(ticker, option_type, strike_price, expiry_date)
+                price_market = get_option_market_price(ticker, option_type.lower(), strike_price, expiry_date)
                 if price_market is None:
                     st.error("Failed to fetch option market price. Try a closer-to-the-money strike.")
                     st.session_state.calculation_done = False
                     return
 
-                iv = implied_volatility(price_market, S, strike_price, T, risk_free_rate, option_type)
+                iv = implied_volatility(price_market, S, strike_price, T, risk_free_rate, option_type.lower())
                 if iv is None:
                     st.error("Could not compute implied volatility. Try a closer-to-the-money strike.")
                     st.session_state.calculation_done = False
                     return
 
                 # Calculate Greeks
-                greeks = black_scholes_greeks(S, strike_price, T, risk_free_rate, iv, option_type)
+                greeks = black_scholes_greeks(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                 greeks_df = pd.DataFrame({
                     "Greek": ["Delta", "Gamma", "Vega", "Theta", "Rho"],
                     "Value": [
@@ -705,6 +663,13 @@ def options_pricing_main():
                         greeks['Vega'],
                         greeks['Theta'],
                         greeks['Rho']
+                    ],
+                    "Description": [
+                        "Sensitivity to underlying price change",
+                        "Rate of change of delta",
+                        "Sensitivity to volatility change",
+                        "Time decay impact",
+                        "Sensitivity to interest rate change"
                     ]
                 })
                 st.session_state.greeks_df = greeks_df
@@ -712,13 +677,13 @@ def options_pricing_main():
                 # Calculate option price using selected model
                 start = time.time()
                 if pricing_model == "Black-Scholes":
-                    price = black_scholes_price(S, strike_price, T, risk_free_rate, iv, option_type)
+                    price = black_scholes_price(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                 elif pricing_model == "Binomial Tree":
-                    price = binomial_tree_price(S, strike_price, T, risk_free_rate, iv, option_type)
+                    price = binomial_tree_price(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                 elif pricing_model == "Monte Carlo":
-                    price = monte_carlo_price(S, strike_price, T, risk_free_rate, iv, option_type)
+                    price = monte_carlo_price(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                 else:
-                    price = black_scholes_price(S, strike_price, T, risk_free_rate, iv, option_type)
+                    price = black_scholes_price(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                 end = time.time()
                 calc_time = end - start
 
@@ -726,11 +691,7 @@ def options_pricing_main():
                 etfs = SECTOR_MAP.get(sector, [])
                 symbols = [ticker] + etfs
                 df = yf.download(symbols, period="1mo", interval="1d")["Close"].dropna(axis=1, how="any")
-
-                if return_type == "Log":
-                    returns = (df / df.shift(1)).apply(np.log).dropna()
-                else:
-                    returns = df.pct_change().dropna()
+                returns = df.pct_change().dropna()
 
                 # Z-score calculation
                 window = 20
@@ -777,13 +738,15 @@ def options_pricing_main():
 
                 # Prepare summary DataFrame
                 summary_df = pd.DataFrame({
-                    "Metric": ["Market Price", f"Model Price ({pricing_model})", "Implied Volatility (IV)", "Suggested Capital", "Calculation Time"],
+                    "Metric": ["Underlying Price", "Market Price", f"Model Price ({pricing_model})", 
+                              "Implied Volatility (IV)", "Days to Expiry", "Suggested Capital"],
                     "Value": [
+                        f"${S:.2f}",
                         f"${price_market:.2f}",
                         f"${float(price):.2f}",
                         f"{iv*100:.2f}%",
-                        f"${float(capital):.2f}",
-                        f"{float(calc_time):.4f} seconds"
+                        f"{days_to_expiry} days",
+                        f"${float(capital):,.2f}"
                     ]
                 })
                 st.session_state.summary_info = summary_df
@@ -803,7 +766,7 @@ def options_pricing_main():
                     np.random.seed(42)
                     dt = T
                     ST = S * np.exp((risk_free_rate - 0.5 * iv**2) * dt + iv * np.sqrt(dt) * np.random.randn(simulations))
-                    if option_type == "call":
+                    if option_type.lower() == "call":
                         payoffs = np.maximum(ST - strike_price, 0)
                     else:
                         payoffs = np.maximum(strike_price - ST, 0)
@@ -832,8 +795,8 @@ def options_pricing_main():
                     y=profits,
                     mode='lines+markers',
                     name='Expected Profit',
-                    line=dict(color='#4CAF50', width=2),
-                    marker=dict(size=8, color='#4CAF50'),
+                    line=dict(color='#3498db', width=2),
+                    marker=dict(size=8, color='#3498db'),
                     hovertemplate='<b>Capital</b>: $%{x:,.0f}<br><b>Profit</b>: $%{y:,.2f}<extra></extra>',
                 ))
 
@@ -842,7 +805,7 @@ def options_pricing_main():
                         x=capitals + capitals[::-1],
                         y=profits_ci_upper + profits_ci_lower[::-1],
                         fill='toself',
-                        fillcolor='rgba(76, 175, 80, 0.2)',
+                        fillcolor='rgba(52, 152, 219, 0.2)',
                         line=dict(color='rgba(255,255,255,0)'),
                         hoverinfo="skip",
                         showlegend=True,
@@ -866,14 +829,14 @@ def options_pricing_main():
 
                 # Generate Black-Scholes sensitivities plot if using BS model
                 if pricing_model == "Black-Scholes":
-                    bs_sensitivities_fig = plot_black_scholes_sensitivities(S, strike_price, T, risk_free_rate, iv, option_type)
+                    bs_sensitivities_fig = plot_black_scholes_sensitivities(S, strike_price, T, risk_free_rate, iv, option_type.lower())
                     st.session_state.bs_sensitivities_fig = bs_sensitivities_fig
 
                 st.session_state.calculation_done = True
-                st.success("Calculation complete!")
+                st.success("Analysis complete!")
 
             except Exception as e:
-                st.error(f"Calculation failed: {str(e)}")
+                st.error(f"Analysis failed: {str(e)}")
                 st.session_state.calculation_done = False
 
     # Display results if calculation is done
@@ -883,18 +846,22 @@ def options_pricing_main():
         
         # Metrics in cards
         with st.container():
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
+            
             with col1:
-                st.markdown("### Option Greeks")
-                if st.session_state.greeks_df is not None:
-                    st.dataframe(st.session_state.greeks_df, use_container_width=True)
+                st.markdown("### Option Metrics")
+                if st.session_state.summary_info is not None:
+                    st.dataframe(st.session_state.summary_info, use_container_width=True, hide_index=True)
+                
+                st.markdown("### Trading Advice")
+                if st.session_state.trading_advice is not None:
+                    st.dataframe(st.session_state.trading_advice, use_container_width=True, hide_index=True)
             
             with col2:
-                st.markdown("### Summary Metrics")
-                if st.session_state.summary_info is not None:
-                    st.dataframe(st.session_state.summary_info, use_container_width=True)
-            
-            with col3:
+                st.markdown("### Option Greeks")
+                if st.session_state.greeks_df is not None:
+                    st.dataframe(st.session_state.greeks_df, use_container_width=True, hide_index=True)
+                
                 if st.session_state.iv_percentile is not None:
                     st.markdown("### Volatility Context")
                     st.metric(
@@ -902,12 +869,6 @@ def options_pricing_main():
                         value=f"{st.session_state.iv_percentile:.0f}th percentile",
                         help="How current IV compares to 1-year history (higher = more extreme)"
                     )
-        
-        # Trading Advice
-        st.markdown("### Trading Advice")
-        with st.expander("View detailed trading recommendations"):
-            if st.session_state.trading_advice is not None:
-                st.dataframe(st.session_state.trading_advice, use_container_width=True)
         
         # Plots
         if st.session_state.plot_fig is not None:
@@ -923,9 +884,9 @@ def options_pricing_main():
         st.markdown("---")
         if st.session_state.export_csv is not None:
             st.download_button(
-                label="Download CSV Report",
+                label="Download Full Analysis Report",
                 data=st.session_state.export_csv,
-                file_name="options_analysis_report.csv",
+                file_name=f"{ticker}_options_analysis.csv",
                 mime="text/csv"
             )
 
@@ -933,6 +894,7 @@ def options_pricing_main():
 def portfolio_optimization_page():
     """Streamlit interface for portfolio optimization"""
     st.title("Portfolio Optimizer")
+    st.markdown("Construct optimal portfolios using Modern Portfolio Theory or Hierarchical Risk Parity approaches.")
     
     # Input parameters
     with st.expander("Portfolio Configuration", expanded=True):
@@ -941,21 +903,24 @@ def portfolio_optimization_page():
         with col1:
             tickers = st.text_area(
                 "Asset Tickers (comma separated)",
-                value="AAPL, MSFT, GOOG, AMZN, TSLA, JPM, JNJ, PG, WMT, DIS"
+                value="AAPL, MSFT, GOOG, AMZN, TSLA, JPM, JNJ, PG, WMT, DIS",
+                key="portfolio_tickers"
             )
             tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
             
             method = st.selectbox(
                 "Optimization Method",
                 ["MPT (Modern Portfolio Theory)",
-                 "HRP (Hierarchical Risk Parity)"]
+                 "HRP (Hierarchical Risk Parity)"],
+                key="optimization_method"
             )
             
         with col2:
             end_date = datetime.now()
             start_date = st.date_input(
                 "Historical Data Start Date",
-                value=end_date - timedelta(days=5*365))
+                value=end_date - timedelta(days=5*365),
+                key="start_date")
             
             if "MPT" in method:
                 target_return = st.slider(
@@ -963,16 +928,30 @@ def portfolio_optimization_page():
                     min_value=0.0,
                     max_value=50.0,
                     value=10.0,
-                    step=0.5
+                    step=0.5,
+                    key="target_return"
                 ) / 100
     
     # Run optimization
-    if st.button("Run Optimization"):
+    if st.button("Optimize Portfolio", key="optimize_portfolio"):
         with st.spinner("Running optimization..."):
             try:
                 # Download data
-                data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
-                returns = data.pct_change().dropna()
+                data = yf.download(tickers, start=start_date, end=end_date)
+                if data.empty:
+                    st.error("No data returned for these tickers. Please check your inputs.")
+                    return
+                
+                # Check if 'Adj Close' exists in the columns
+                if 'Adj Close' not in data.columns and 'Close' in data.columns:
+                    # Handle single-level columns (non-MultiIndex)
+                    returns = data['Close'].pct_change().dropna()
+                elif 'Adj Close' in data.columns:
+                    # Handle MultiIndex columns
+                    returns = data['Adj Close'].pct_change().dropna()
+                else:
+                    st.error("Could not find price data in the downloaded dataset.")
+                    return
                 
                 if len(tickers) == 1:
                     st.error("Please enter at least 2 tickers for portfolio optimization")
@@ -998,12 +977,15 @@ def portfolio_optimization_page():
                 
                 with col1:
                     st.subheader("Optimal Allocation")
-                    alloc_df = pd.DataFrame.from_dict(weights, orient='index', columns=['Weight'])
-                    alloc_df['Weight'] = alloc_df['Weight'].apply(lambda x: f"{x*100:.2f}%")
-                    st.dataframe(alloc_df.sort_values('Weight', ascending=False))
+                    alloc_df = pd.DataFrame({
+                        "Ticker": weights.index,
+                        "Weight": [f"{w*100:.1f}%" for w in weights.values]
+                    })
+                    st.dataframe(alloc_df.sort_values("Weight", ascending=False), 
+                                use_container_width=True, hide_index=True)
                 
                 with col2:
-                    st.subheader("Key Metrics")
+                    st.subheader("Portfolio Metrics")
                     metrics = {
                         "Expected Return": f"{performance[0]*100:.2f}%",
                         "Annual Volatility": f"{performance[1]*100:.2f}%",
@@ -1015,7 +997,7 @@ def portfolio_optimization_page():
                 # Create visualization
                 fig = make_subplots(
                     rows=1, cols=2,
-                    specs=[[{"type": "pie"}, {"type": "bar"}]],
+                    specs=[[{"type": "pie"}, {"type": "xy"}]],
                     subplot_titles=("Portfolio Allocation", "Risk-Return Profile")
                 )
                 
@@ -1024,7 +1006,9 @@ def portfolio_optimization_page():
                     go.Pie(
                         labels=weights.index,
                         values=weights.values,
-                        name="Allocation"
+                        name="Allocation",
+                        textinfo='label+percent',
+                        insidetextorientation='radial'
                     ),
                     row=1, col=1
                 )
@@ -1034,21 +1018,43 @@ def portfolio_optimization_page():
                     go.Bar(
                         x=list(metrics.keys()),
                         y=[float(v.strip('%')) if '%' in v else float(v) for v in metrics.values()],
-                        marker_color=['#2ecc71', '#e74c3c', '#3498db'],
-                        name="Metrics"
+                        marker_color=['#3498db', '#e74c3c', '#2ecc71'],
+                        name="Metrics",
+                        text=[v for v in metrics.values()],
+                        textposition='auto'
                     ),
                     row=1, col=2
                 )
                 
                 fig.update_layout(
                     height=500,
-                    showlegend=True,
+                    showlegend=False,
                     template="plotly_white",
                     title_text=f"{method} Portfolio Optimization Results",
-                    margin=dict(l=50, r=50, b=50, t=100)
+                    margin=dict(l=50, r=50, b=50, t=100),
+                    title_font=dict(size=18, color="#2c3e50")
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Display correlation matrix
+                st.subheader("Asset Correlations")
+                corr_matrix = returns.corr()
+                fig_corr = go.Figure(data=go.Heatmap(
+                    z=corr_matrix.values,
+                    x=corr_matrix.columns,
+                    y=corr_matrix.index,
+                    colorscale='Blues',
+                    zmin=-1,
+                    zmax=1
+                ))
+                fig_corr.update_layout(
+                    title="Correlation Matrix",
+                    xaxis_title="Assets",
+                    yaxis_title="Assets",
+                    height=600
+                )
+                st.plotly_chart(fig_corr, use_container_width=True)
                 
             except Exception as e:
                 st.error(f"Optimization failed: {str(e)}")
@@ -1056,13 +1062,13 @@ def portfolio_optimization_page():
 # --- Fundamental Analysis Module ---
 def fundamental_analysis_page():
     """Streamlit interface for fundamental analysis"""
-    st.title("Fundamental Analyzer")
-    st.markdown("**This tool is for stocks only** - ETF data may be incomplete")
+    st.title("Fundamental Analysis")
+    st.markdown("Analyze company fundamentals, financial statements, and valuation metrics.")
     
     # Input parameters
-    ticker = st.text_input("Enter Stock Ticker", value="AAPL").upper()
+    ticker = st.text_input("Enter Stock Ticker", value="AAPL", key="fundamentals_ticker").upper()
     
-    if st.button("Analyze Fundamentals"):
+    if st.button("Analyze Fundamentals", key="analyze_fundamentals"):
         with st.spinner("Fetching data..."):
             try:
                 stock = yf.Ticker(ticker)
@@ -1074,7 +1080,7 @@ def fundamental_analysis_page():
                 
                 # Display key metrics
                 st.subheader("Company Overview")
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     st.metric("Sector", info.get('sector', 'N/A'))
@@ -1084,32 +1090,41 @@ def fundamental_analysis_page():
                 with col2:
                     st.metric("P/E Ratio", info.get('trailingPE', 'N/A'))
                     st.metric("Forward P/E", info.get('forwardPE', 'N/A'))
+                    st.metric("P/B Ratio", info.get('priceToBook', 'N/A'))
+                
+                with col3:
                     st.metric("Dividend Yield", f"{info.get('dividendYield', 0)*100:.2f}%" if info.get('dividendYield') else 'N/A')
+                    st.metric("Beta", info.get('beta', 'N/A'))
+                    st.metric("52 Week Range", 
+                             f"{info.get('fiftyTwoWeekLow', 'N/A')} - {info.get('fiftyTwoWeekHigh', 'N/A')}" 
+                             if info.get('fiftyTwoWeekLow') else 'N/A')
                 
                 # Financial statements
                 st.subheader("Financial Statements")
                 
                 try:
-                    # Income Statement
-                    income = stock.financials.T
-                    if not income.empty:
-                        st.markdown("**Income Statement**")
-                        st.dataframe(income[['Total Revenue', 'Gross Profit', 'Operating Income', 'Net Income']].style.format("${:,.0f}"))
+                    tab1, tab2, tab3 = st.tabs(["Income Statement", "Balance Sheet", "Cash Flow"])
                     
-                    # Balance Sheet
-                    balance = stock.balance_sheet.T
-                    if not balance.empty:
-                        st.markdown("**Balance Sheet**")
-                        st.dataframe(balance[['Total Assets', 'Total Liabilities', 'Total Equity']].style.format("${:,.0f}"))
+                    with tab1:
+                        income = stock.financials.T
+                        if not income.empty:
+                            st.dataframe(income[['Total Revenue', 'Gross Profit', 'Operating Income', 'Net Income']]
+                                        .style.format("${:,.0f}"), use_container_width=True)
                     
-                    # Cash Flow
-                    cashflow = stock.cashflow.T
-                    if not cashflow.empty:
-                        st.markdown("**Cash Flow Statement**")
-                        st.dataframe(cashflow[['Operating Cash Flow', 'Investing Cash Flow', 'Financing Cash Flow']].style.format("${:,.0f}"))
+                    with tab2:
+                        balance = stock.balance_sheet.T
+                        if not balance.empty:
+                            st.dataframe(balance[['Total Assets', 'Total Liabilities', 'Total Stockholder Equity']]
+                                        .style.format("${:,.0f}"), use_container_width=True)
+                    
+                    with tab3:
+                        cashflow = stock.cashflow.T
+                        if not cashflow.empty:
+                            st.dataframe(cashflow[['Operating Cash Flow', 'Investing Cash Flow', 'Financing Cash Flow']]
+                                        .style.format("${:,.0f}"), use_container_width=True)
                 
                 except Exception as e:
-                    st.warning(f"Could not fetch complete financial statements: {e}")
+                    st.warning(f"Could not fetch complete financial statements: {str(e)}")
                 
                 # Historical data chart
                 st.subheader("Historical Performance")
@@ -1120,51 +1135,130 @@ def fundamental_analysis_page():
                         x=hist.index,
                         y=hist['Close'],
                         name='Price',
-                        line=dict(color='#1f77b4')
+                        line=dict(color='#3498db')
                     ))
+                    
+                    # Add 50-day and 200-day moving averages
+                    fig.add_trace(go.Scatter(
+                        x=hist.index,
+                        y=hist['Close'].rolling(50).mean(),
+                        name='50-day MA',
+                        line=dict(color='#e74c3c', dash='dot')
+                    ))
+                    
+                    fig.add_trace(go.Scatter(
+                        x=hist.index,
+                        y=hist['Close'].rolling(200).mean(),
+                        name='200-day MA',
+                        line=dict(color='#2ecc71', dash='dot')
+                    ))
+                    
                     fig.update_layout(
                         title=f"{ticker} Price History",
                         yaxis_title="Price ($)",
-                        template="plotly_white"
+                        template="plotly_white",
+                        hovermode="x unified",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
                     st.plotly_chart(fig, use_container_width=True)
+                
+                # Analyst recommendations
+                try:
+                    rec = stock.recommendations
+                    if rec is not None and not rec.empty:
+                        st.subheader("Analyst Recommendations")
+                        recent_rec = rec.tail(10)
+                        st.dataframe(recent_rec, use_container_width=True)
+                except:
+                    pass
                 
             except Exception as e:
                 st.error(f"Analysis failed: {str(e)}")
 
 # --- Main App Navigation ---
 def show_welcome_page():
-    st.markdown('<div class="welcome-header">Welcome to Your Trading Analytics Suite</div>', unsafe_allow_html=True)
+    st.markdown('<div class="header">Trading Analytics Platform</div>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="margin-bottom: 2rem;">
+        <p style="font-size: 1.1rem; color: #555;">
+            Professional-grade tools for options analysis, portfolio optimization, and fundamental research.
+            Select a module below to begin.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button('Options Pricing & Analysis', key='options_btn', help='Analyze options strategies and get trading advice'):
+        st.markdown("### Options Analysis")
+        st.markdown("""
+        <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; height: 200px;">
+            <p>Price options using multiple models, analyze Greeks, and get trading recommendations.</p>
+            <ul>
+                <li>Black-Scholes, Binomial, Monte Carlo</li>
+                <li>Implied volatility analysis</li>
+                <li>Capital allocation advice</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open Options Analyzer", key="options_btn"):
             st.session_state.current_page = 'options'
     
     with col2:
-        if st.button('Portfolio Optimization', key='portfolio_btn', help='Optimize your portfolio allocation'):
+        st.markdown("### Portfolio Optimization")
+        st.markdown("""
+        <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; height: 200px;">
+            <p>Construct optimal portfolios using Modern Portfolio Theory or Hierarchical Risk Parity.</p>
+            <ul>
+                <li>Mean-variance optimization</li>
+                <li>Risk parity approaches</li>
+                <li>Correlation analysis</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open Portfolio Optimizer", key="portfolio_btn"):
             st.session_state.current_page = 'portfolio'
     
     with col3:
-        if st.button('Stock Fundamentals', key='fundamentals_btn', help='Analyze company fundamentals and earnings'):
+        st.markdown("### Fundamental Analysis")
+        st.markdown("""
+        <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; height: 200px;">
+            <p>Analyze company fundamentals, financial statements, and valuation metrics.</p>
+            <ul>
+                <li>Financial statements</li>
+                <li>Valuation ratios</li>
+                <li>Historical performance</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open Fundamental Analyzer", key="fundamentals_btn"):
             st.session_state.current_page = 'fundamentals'
     
     st.markdown("""
-    <div style="margin-top: 3rem;">
-        <h3>About This Application</h3>
-        <p>This trading analytics platform provides:</p>
+    <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 1rem;">
+        <h3>About This Platform</h3>
+        <p>This professional trading analytics platform provides institutional-grade tools for:</p>
         <ul>
-            <li><strong>Options Pricing:</strong> Black-Scholes, Binomial Tree, and Monte Carlo models with Greeks calculation</li>
-            <li><strong>Portfolio Optimization:</strong> Modern Portfolio Theory (MPT) and Hierarchical Risk Parity (HRP)</li>
-            <li><strong>Fundamental Analysis:</strong> Comprehensive stock analysis including financial statements</li>
+            <li><strong>Options traders:</strong> Comprehensive pricing models with sensitivity analysis and trading recommendations</li>
+            <li><strong>Portfolio managers:</strong> Advanced optimization techniques with risk analysis</li>
+            <li><strong>Fundamental investors:</strong> Detailed financial statement analysis and valuation metrics</li>
         </ul>
-        <p>Select an analysis module above to get started.</p>
+        <p>Data provided by Yahoo Finance and US Treasury.</p>
     </div>
     """, unsafe_allow_html=True)
 
 # Main app logic
 def main():
+    # Set page config
+    st.set_page_config(
+        page_title="Trading Analytics Platform",
+        page_icon="📊",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Page navigation
     if st.session_state.current_page == 'welcome':
         show_welcome_page()
     elif st.session_state.current_page == 'options':
@@ -1178,6 +1272,13 @@ def main():
     if st.session_state.current_page != 'welcome':
         if st.button('← Back to Main Menu', key='back_btn'):
             st.session_state.current_page = 'welcome'
+    
+    # Footer
+    st.markdown("""
+    <div class="footer">
+        <p>Trading Analytics Platform © 2023 | Data provided by Yahoo Finance</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
