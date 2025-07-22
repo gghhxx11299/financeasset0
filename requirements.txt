@@ -1,9 +1,9 @@
 numpy
 pandas
+pandas_ta
 yfinance
-TA-Lib==0.4.0
-
 scipy
 scikit-learn
+hmmlearn
 streamlit
-markov-regime-model
+matplotlib
