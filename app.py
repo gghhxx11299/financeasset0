@@ -1,17 +1,15 @@
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
 import yfinance as yf
 from scipy import interpolate, stats
 from sklearn.decomposition import PCA
-from hmmlearn.hmm import GaussianHMM
 from datetime import datetime, timedelta
 import streamlit as st
 import warnings
 warnings.filterwarnings('ignore')
 
 # ======================
-# TA-LIB FREE HDFM MODEL
+# SELF-CONTAINED HDFM MODEL
 # ======================
 class RobustHDFM:
     def __init__(self, base_window=50, epsilon=1e-8):
@@ -33,13 +31,21 @@ class RobustHDFM:
         iqr = q3 - q1
         return (series - rolling.median()) / (iqr + self.epsilon)
     
+    def _calculate_atr(self, high, low, close, length=14):
+        """Manual ATR calculation without pandas-ta"""
+        tr = pd.DataFrame({
+            'hl': high - low,
+            'hc': abs(high - close.shift(1)),
+            'lc': abs(low - close.shift(1))
+        }).max(axis=1)
+        return tr.rolling(length).mean()
+    
     def _detect_anomalies(self, df):
-        """Market shock detection using pandas-ta"""
+        """Market shock detection using manual calculations"""
         recent = df.iloc[-1]
         avg = df.rolling(100).mean().iloc[-1]
         
-        # Using pandas-ta for volatility calculations
-        atr = df.ta.atr(length=14)
+        atr = self._calculate_atr(df['High'], df['Low'], df['Close'])
         current_atr = atr.iloc[-1]
         avg_atr = atr.mean()
         
@@ -50,20 +56,24 @@ class RobustHDFM:
         return volume_spike or price_gap or volatility_spike
     
     def _detect_regime(self, prices):
-        """Regime detection using HMM"""
+        """Simplified regime detection without HMM"""
         if len(prices) < 100:
             return 0
         
-        returns = np.diff(np.log(prices)).reshape(-1, 1)
-        model = GaussianHMM(n_components=3, covariance_type="diag", n_iter=1000)
-        model.fit(returns)
-        return model.predict(returns)[-1]
+        returns = np.diff(np.log(prices))
+        std = np.std(returns)
+        
+        if std > 0.02:  # 2% daily volatility threshold
+            return 2  # High volatility
+        elif std > 0.01:
+            return 1  # Medium volatility
+        return 0  # Low volatility
     
     def calculate_divergences(self, ohlc_df):
         df = ohlc_df.copy()
         
-        # Volatility metrics using pandas-ta
-        df['ATR'] = df.ta.atr(length=14)
+        # Volatility metrics with manual ATR
+        df['ATR'] = self._calculate_atr(df['High'], df['Low'], df['Close'])
         volatility_ratio = df['ATR'].iloc[-1] / df['ATR'].mean()
         window = self._dynamic_window(volatility_ratio)
         
@@ -97,27 +107,21 @@ class RobustHDFM:
         return df
     
     def hierarchical_interpolation(self, multi_tf_data):
-        # PCA for dimensionality reduction
+        # Manual feature combination without PCA
         tf_keys = sorted(multi_tf_data.keys())
-        features = []
+        weighted_G_up = 0
+        weighted_G_down = 0
+        total_weight = 0
         
-        for tf in tf_keys:
+        # Simple weighted average based on timeframe "importance"
+        for i, tf in enumerate(tf_keys):
             tf_df = multi_tf_data[tf]
-            features.append([
-                tf_df['G_up'].mean(),
-                tf_df['G_down'].mean(),
-                tf_df['ATR'].iloc[-1] if 'ATR' in tf_df.columns else 0
-            ])
-        
-        pca = PCA(n_components=2)
-        reduced = pca.fit_transform(features)
-        
-        # Timeframe weights based on explained variance
-        weights = pca.explained_variance_ratio_
-        weighted_G_up = sum(w*f[0] for w,f in zip(weights, reduced))
-        weighted_G_down = sum(w*f[1] for w,f in zip(weights, reduced))
-        
-        return weighted_G_up, weighted_G_down
+            weight = 1 / (i + 1)  # Higher weight for shorter timeframes
+            weighted_G_up += tf_df['G_up'].mean() * weight
+            weighted_G_down += tf_df['G_down'].mean() * weight
+            total_weight += weight
+            
+        return weighted_G_up/total_weight, weighted_G_down/total_weight
     
     def forecast(self, current_price, metrics):
         # Regime-adjusted predictions
@@ -125,13 +129,10 @@ class RobustHDFM:
         B_up = current_price * (1 + metrics['G_up'] * metrics['Id_up'] * (1 - regime_penalty))
         B_down = current_price * (1 + metrics['G_down'] * metrics['Id_down'] * (1 - regime_penalty))
         
-        # Kelly position sizing
-        if 'accuracy' in metrics:
-            kelly_fraction = min(0.5, max(0.05, 
-                metrics['accuracy'] - (1 - metrics['accuracy'])
-            ))
-            return B_up, B_down, kelly_fraction
-        return B_up, B_down, 0.2  # Default 20% position
+        # Simplified position sizing
+        confidence = metrics.get('C', 0.5)
+        position_size = min(0.5, max(0.05, confidence * 0.5))
+        return B_up, B_down, position_size
     
     def adaptive_error_correction(self, current_price, predictions, actual_future):
         B_up, B_down, _ = predictions
@@ -166,7 +167,7 @@ class RobustHDFM:
 # ======================
 def main():
     st.set_page_config(layout="wide")
-    st.title("🔒 Robust HDFM Trading System (pandas-ta Version)")
+    st.title("🔒 Robust HDFM Trading System (Self-Contained Version)")
     
     with st.sidebar:
         st.header("Configuration")
@@ -175,7 +176,7 @@ def main():
         risk_level = st.slider("Risk Level", 1, 5, 3)
         
         if st.button("Run Analysis"):
-            with st.spinner("Running hardened analysis..."):
+            with st.spinner("Running analysis..."):
                 # Initialize with risk-adaptive window
                 model = RobustHDFM(base_window=30 + 20*(5-risk_level))
                 
@@ -205,7 +206,7 @@ def main():
                             'G_down': G_down,
                             'Id_up': last['Id_up'],
                             'Id_down': last['Id_down'],
-                            'accuracy': 0.65  # From historical backtest
+                            'C': last['C']
                         }
                     )
                     
@@ -228,18 +229,26 @@ def main():
                     with col3:
                         st.metric("Recommended Position", 
                                 f"{preds[2]*100:.1f}% of portfolio",
-                                help="Kelly Criterion based sizing")
+                                help="Confidence-based sizing")
                         
                         if model.current_regime == 2:
                             st.warning("High volatility - consider reducing position size")
                     
                     # Visualizations
-                    st.subheader("Multi-Timeframe Signals")
-                    fig, ax = plt.subplots(figsize=(12, 4))
-                    for tf in timeframes:
-                        ax.plot(data[tf].index, data[tf]['G_up'], label=f"{tf} G_up")
+                    st.subheader("Price and Signals")
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    ax.plot(primary_data.index, primary_data['Close'], label='Price', color='black')
+                    ax.scatter(primary_data.index, 
+                              np.where(primary_data['Id_up'] > primary_data['Id_down'], 
+                                      primary_data['Close'], np.nan),
+                              label='Up Signal', color='green', marker='^')
+                    ax.scatter(primary_data.index, 
+                              np.where(primary_data['Id_up'] < primary_data['Id_down'], 
+                                      primary_data['Close'], np.nan),
+                              label='Down Signal', color='red', marker='v')
                     ax.legend()
                     st.pyplot(fig)
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
     main()
