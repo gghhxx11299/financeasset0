@@ -33,15 +33,28 @@ class RobustHDFM:
     
     def _calculate_atr(self, high, low, close, length=14):
         """Manual ATR calculation without pandas-ta"""
-        tr = pd.DataFrame({
-            'hl': high - low,
-            'hc': abs(high - close.shift(1)),
-            'lc': abs(low - close.shift(1))
-        }).max(axis=1)
+        # Ensure we have pandas Series with proper index
+        if not isinstance(high, pd.Series):
+            high = pd.Series(high)
+        if not isinstance(low, pd.Series):
+            low = pd.Series(low)
+        if not isinstance(close, pd.Series):
+            close = pd.Series(close)
+        
+        # Calculate True Range components
+        hl = high - low
+        hc = abs(high - close.shift(1))
+        lc = abs(low - close.shift(1))
+        
+        # Combine components and calculate ATR
+        tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
         return tr.rolling(length).mean()
     
     def _detect_anomalies(self, df):
         """Market shock detection using manual calculations"""
+        if df.empty or len(df) < 100:
+            return False
+            
         recent = df.iloc[-1]
         avg = df.rolling(100).mean().iloc[-1]
         
@@ -70,6 +83,9 @@ class RobustHDFM:
         return 0  # Low volatility
     
     def calculate_divergences(self, ohlc_df):
+        if ohlc_df.empty or len(ohlc_df) < 20:
+            return pd.DataFrame()
+            
         df = ohlc_df.copy()
         
         # Volatility metrics with manual ATR
@@ -116,10 +132,15 @@ class RobustHDFM:
         # Simple weighted average based on timeframe "importance"
         for i, tf in enumerate(tf_keys):
             tf_df = multi_tf_data[tf]
+            if tf_df.empty:
+                continue
             weight = 1 / (i + 1)  # Higher weight for shorter timeframes
             weighted_G_up += tf_df['G_up'].mean() * weight
             weighted_G_down += tf_df['G_down'].mean() * weight
             total_weight += weight
+            
+        if total_weight == 0:
+            return 0, 0
             
         return weighted_G_up/total_weight, weighted_G_down/total_weight
     
@@ -193,6 +214,11 @@ def main():
                     # Generate predictions
                     primary_tf = timeframes[0]
                     primary_data = data[primary_tf]
+                    
+                    if primary_data.empty:
+                        st.error("No valid data available for analysis")
+                        return
+                    
                     last = primary_data.iloc[-1]
                     
                     # Get interpolated signals
@@ -220,11 +246,11 @@ def main():
                     
                     with col2:
                         st.metric("Adjusted Up Target", 
-                                f"${preds[0][0]:.2f} - ${preds[0][1]:.2f}",
-                                delta=f"{(preds[0][1]/last['Close']-1)*100:.1f}%")
+                                f"${preds[0]:.2f}",
+                                delta=f"{(preds[0]/last['Close']-1)*100:.1f}%")
                         st.metric("Adjusted Down Target", 
-                                f"${preds[1][0]:.2f} - ${preds[1][1]:.2f}",
-                                delta=f"{(preds[1][0]/last['Close']-1)*100:.1f}%")
+                                f"${preds[1]:.2f}",
+                                delta=f"{(preds[1]/last['Close']-1)*100:.1f}%")
                     
                     with col3:
                         st.metric("Recommended Position", 
