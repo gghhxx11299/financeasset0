@@ -1,10 +1,8 @@
-streamlit
-pandas
 numpy
-matplotlib
-scipy
-requests
-beautifulsoup4
+pandas
 yfinance
-plotly
-kaleido
+TA-Lib
+scipy
+scikit-learn
+streamlit
+markov-regime-model
