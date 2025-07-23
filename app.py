@@ -78,6 +78,26 @@ def set_theme():
             padding: 15px;
             margin: 5px;
         }}
+        .disclaimer {{
+            background-color: #2A2A2A;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 0.8rem;
+            color: #AAAAAA;
+        }}
+        .description {{
+            background-color: #2A2A2A;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }}
+        .author {{
+            text-align: right;
+            font-style: italic;
+            color: {COLORS['secondary']};
+            margin-top: 20px;
+        }}
         </style>
         """,
         unsafe_allow_html=True
@@ -208,16 +228,20 @@ class TradingAlgorithm:
             elif id_up_decreased and id_down_increased:
                 self.enter_trade('short', candle)
         
-        # Check for exit signals
+        # Check for exit signals - Modified to close opposite positions
         elif self.current_position == 'long':
             # Exit long when a short signal occurs
             if id_up_decreased and id_down_increased:
                 closed_trade = self.exit_trade(candle, 'opposite_signal')
+                # Enter short position immediately after closing long
+                self.enter_trade('short', candle)
         
         elif self.current_position == 'short':
             # Exit short when a long signal occurs
             if id_down_decreased and id_up_increased:
                 closed_trade = self.exit_trade(candle, 'opposite_signal')
+                # Enter long position immediately after closing short
+                self.enter_trade('long', candle)
         
         # Update previous values
         self.prev_id_up = current_id_up
@@ -915,6 +939,32 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
+    # Description section
+    with st.expander("📝 Description", expanded=True):
+        st.markdown("""
+        <div class="description">
+        <h3>About This Tool</h3>
+        <p>This application uses a Kalman Filter to analyze price divergences in financial markets. 
+        It identifies potential reversal points by tracking the relationship between price movements 
+        and divergence indices (Id_up and Id_down).</p>
+        
+        <h4>Key Features:</h4>
+        <ul>
+            <li>Real-time divergence detection using Kalman filtering</li>
+            <li>Multi-timeframe analysis (1m to 1wk)</li>
+            <li>Backtesting capability with trade simulation</li>
+            <li>Visualization of divergence failures and performance metrics</li>
+            <li>Interactive charts with Plotly</li>
+        </ul>
+        
+        <h4>How It Works:</h4>
+        <p>The algorithm calculates two divergence indices (Id_up and Id_down) that measure the 
+        relationship between price movements and their divergences. When these indices cross certain 
+        thresholds, they generate trading signals. The Kalman filter helps smooth these signals 
+        and reduce noise.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     # Initialize model
     if 'model' not in st.session_state:
         st.session_state.model = DivergenceModel()
@@ -967,6 +1017,24 @@ def main():
                     st.success("Backtest completed!")
                 except Exception as e:
                     st.error(f"Error running backtest: {str(e)}")
+        
+        # Disclaimer section
+        st.markdown("""
+        <div class="disclaimer">
+        <h4>⚠️ Disclaimer</h4>
+        <p>This tool is for educational and research purposes only. The analysis provided 
+        should not be considered as financial advice. Trading financial markets involves 
+        risk, and past performance is not indicative of future results. Always conduct 
+        your own research before making any trading decisions.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Author credit
+        st.markdown("""
+        <div class="author">
+        <p>Developed by Gebreal Mulugeta</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Main content area
     if st.session_state.get('data_loaded', False):
