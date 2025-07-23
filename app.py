@@ -8,10 +8,80 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import logging
 from collections import deque
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Custom theme colors
+COLORS = {
+    'background': '#1E1E1E',
+    'text': '#FFFFFF',
+    'primary': '#00FFAA',
+    'secondary': '#0088FF',
+    'accent': '#FF00AA',
+    'positive': '#00FF88',
+    'negative': '#FF4444',
+    'div_up': '#00FFAA',
+    'div_down': '#FF4444'
+}
+
+# Apply custom theme
+def set_theme():
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: {COLORS['background']};
+            color: {COLORS['text']};
+        }}
+        .css-1d391kg {{
+            background-color: {COLORS['background']};
+        }}
+        .st-bb {{
+            background-color: {COLORS['background']};
+        }}
+        .st-at {{
+            background-color: {COLORS['primary']};
+        }}
+        .st-ax {{
+            color: {COLORS['text']};
+        }}
+        .metric-container {{
+            background-color: #2A2A2A;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }}
+        .metric-label {{
+            font-size: 1rem;
+            color: {COLORS['text']};
+            opacity: 0.8;
+        }}
+        .metric-value {{
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: {COLORS['primary']};
+        }}
+        .positive-pnl {{
+            color: {COLORS['positive']};
+        }}
+        .negative-pnl {{
+            color: {COLORS['negative']};
+        }}
+        .trade-table {{
+            background-color: #2A2A2A;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 @dataclass
 class Candle:
@@ -108,7 +178,6 @@ class TradingAlgorithm:
     
     def process_candle(self, candle: Dict) -> Optional[Trade]:
         """Process a candle and return a Trade if one was closed"""
-        # Verify we have required data
         if 'Id_up' not in candle or 'Id_down' not in candle:
             st.warning("Missing divergence indices in candle data")
             return None
@@ -116,16 +185,10 @@ class TradingAlgorithm:
         current_id_up = candle['Id_up']
         current_id_down = candle['Id_down']
         
-        # Initialize previous values if this is the first candle
         if self.prev_id_up is None or self.prev_id_down is None:
             self.prev_id_up = current_id_up
             self.prev_id_down = current_id_down
             return None
-        
-        # Debug print current values
-        st.write(f"\nProcessing candle at {candle['timestamp']}")
-        st.write(f"Current Id_up: {current_id_up:.2f}, Previous: {self.prev_id_up:.2f}")
-        st.write(f"Current Id_down: {current_id_down:.2f}, Previous: {self.prev_id_down:.2f}")
         
         # Calculate direction changes with threshold to avoid noise
         id_up_increased = current_id_up > (self.prev_id_up + 1.0)
@@ -139,25 +202,21 @@ class TradingAlgorithm:
         if self.current_position is None:
             # Buy signal: Id_down decreases and Id_up increases
             if id_down_decreased and id_up_increased:
-                st.write("BUY SIGNAL detected")
                 self.enter_trade('long', candle)
             
             # Sell signal: Id_up decreases and Id_down increases
             elif id_up_decreased and id_down_increased:
-                st.write("SELL SIGNAL detected")
                 self.enter_trade('short', candle)
         
-        # Check for exit signals - MODIFIED SECTION
+        # Check for exit signals
         elif self.current_position == 'long':
-            # Exit long when a short signal occurs (Id_up decreases AND Id_down increases)
+            # Exit long when a short signal occurs
             if id_up_decreased and id_down_increased:
-                st.write("EXIT LONG SIGNAL (opposite signal detected)")
                 closed_trade = self.exit_trade(candle, 'opposite_signal')
         
         elif self.current_position == 'short':
-            # Exit short when a long signal occurs (Id_down decreases AND Id_up increases)
+            # Exit short when a long signal occurs
             if id_down_decreased and id_up_increased:
-                st.write("EXIT SHORT SIGNAL (opposite signal detected)")
                 closed_trade = self.exit_trade(candle, 'opposite_signal')
         
         # Update previous values
@@ -171,7 +230,6 @@ class TradingAlgorithm:
         self.current_position = direction
         self.entry_price = candle['close']
         self.entry_time = candle['timestamp']
-        st.write(f"[Trade] Entered {direction} at {self.entry_price:.2f} on {self.entry_time}")
     
     def exit_trade(self, candle: Dict, reason: str) -> Trade:
         """Exit the current trade and record it"""
@@ -191,9 +249,6 @@ class TradingAlgorithm:
         )
         
         self.trades.append(trade)
-        st.write(f"[Trade] Exited {self.current_position} at {exit_price:.2f} on {candle['timestamp']} "
-              f"(PnL: {pnl:.2f}%)")
-        
         self.current_position = None
         self.entry_price = None
         self.entry_time = None
@@ -203,9 +258,6 @@ class TradingAlgorithm:
     def run_backtest(self, data: pd.DataFrame) -> BacktestResult:
         """Run backtest on historical data"""
         self.reset()  # Clear any existing state
-        
-        st.write("\n[Backtest] Running backtest...")
-        st.write(f"Data columns: {data.columns.tolist()}")
         
         for _, row in data.iterrows():
             candle = row.to_dict()
@@ -230,7 +282,6 @@ class TradingAlgorithm:
     def get_results(self) -> BacktestResult:
         """Calculate backtest results"""
         if not self.trades:
-            st.warning("[Backtest] No trades were generated")
             return BacktestResult(
                 total_trades=0,
                 profitable_trades=0,
@@ -255,14 +306,6 @@ class TradingAlgorithm:
         # Calculate Sharpe ratio (simplified)
         sharpe_ratio = np.mean(pnls) / np.std(pnls) if np.std(pnls) > 0 else 0
         
-        st.write("\n[Backtest] Results:")
-        st.write(f"Total trades: {len(self.trades)}")
-        st.write(f"Profitable trades: {profitable_trades}")
-        st.write(f"Win rate: {win_rate:.2%}")
-        st.write(f"Avg profit: {avg_profit:.2f}%")
-        st.write(f"Max drawdown: {max_drawdown:.2f}%")
-        st.write(f"Sharpe ratio: {sharpe_ratio:.2f}")
-        
         return BacktestResult(
             total_trades=len(self.trades),
             profitable_trades=profitable_trades,
@@ -282,7 +325,6 @@ class DivergenceAnalyzer:
         self.history = []
         self.stats = DivergenceStats()
         self.failure_threshold = 5.0  # 5% threshold for considering a failure
-        st.write(f"[Analyzer] Initialized for {timeframe} timeframe with threshold {self.failure_threshold}%")
 
     def calculate_raw_G(self, current: Candle, previous: Optional[Candle]) -> Tuple[float, float]:
         """Calculate raw G_up and G_down values"""
@@ -368,12 +410,6 @@ class DivergenceAnalyzer:
                 self.stats.failure_percentage = (self.stats.failed_candles / self.stats.total_candles) * 100
                 self.stats.average_failure_magnitude = np.mean(self.stats.recent_failures) if self.stats.recent_failures else 0.0
             
-            # Print significant failures to terminal
-            if failure_mag > 1.0:  # Only print failures > 1%
-                st.write(f"[Failure] {candle.timestamp.strftime('%Y-%m-%d %H:%M')} - "
-                      f"Price moved against prediction by {failure_mag:.2f}% "
-                      f"(Id_up: {Id_up:.1f}, Id_down: {Id_down:.1f})")
-        
         result = {
             "timestamp": candle.timestamp,
             "open": candle.open,
@@ -404,13 +440,6 @@ class DivergenceAnalyzer:
             "average_failure_magnitude": self.stats.average_failure_magnitude,
             "recent_failures": list(self.stats.recent_failures)
         }
-        
-        st.write(f"\n[Stats] Current timeframe: {self.timeframe}")
-        st.write(f"  Total candles analyzed: {stats['total_candles']}")
-        st.write(f"  Failed predictions: {stats['failed_candles']} ({stats['failure_percentage']:.2f}%)")
-        st.write(f"  Average failure magnitude: {stats['average_failure_magnitude']:.2f}%")
-        if stats['recent_failures']:
-             st.write(f"  Recent failures: {[f'{x:.2f}%' for x in stats['recent_failures']]}")
              
         return stats
 
@@ -418,7 +447,6 @@ class MarketDataFetcher:
     @staticmethod
     def fetch_data(ticker: str, period: str, interval: str) -> List[Candle]:
         """Fetch OHLC data from yfinance and convert to Candle objects"""
-        st.write(f"\n[Data Fetch] Downloading {ticker} data for {period} period at {interval} interval...")
         try:
             data = yf.download(ticker, period=period, interval=interval, progress=False)
             if data.empty:
@@ -435,10 +463,6 @@ class MarketDataFetcher:
                     timestamp=idx.to_pydatetime()
                 ))
             
-            st.write(f"[Data Fetch] Successfully fetched {len(candles)} candles")
-            st.write(f"  Date range: {candles[0].timestamp} to {candles[-1].timestamp}")
-            st.write(f"  Price range: ${min(c.close for c in candles):.2f}-${max(c.close for c in candles):.2f}")
-            
             return candles
         except Exception as e:
             st.error(f"[ERROR] Failed to fetch data: {str(e)}")
@@ -453,10 +477,6 @@ class DivergenceModel:
         self.analyzers = {}
         self.current_results = None
         self.setup_analyzers()
-        st.write("\n[Model] Initialized Divergence Model")
-        st.write(f"  Default ticker: {self.ticker}")
-        st.write(f"  Default period: {self.period}")
-        st.write(f"  Default timeframe: {self.timeframe}")
     
     def setup_analyzers(self):
         """Initialize analyzers for all timeframes"""
@@ -465,7 +485,6 @@ class DivergenceModel:
             tf: DivergenceAnalyzer(cfg, tf) 
             for tf, cfg in configs.items()
         }
-        st.write("[Model] Initialized analyzers for timeframes:", list(configs.keys()))
     
     def get_configurations(self) -> Dict[str, KalmanFilterConfig]:
         """Return configurations for different timeframes"""
@@ -515,7 +534,6 @@ class DivergenceModel:
     
     def process_timeframe(self, ticker: str, timeframe: str, period: str) -> pd.DataFrame:
         """Fetch and process data for a specific timeframe"""
-        st.write(f"\n[Model] Starting processing for {ticker} ({timeframe}, {period})")
         self.ticker = ticker
         self.timeframe = timeframe
         self.period = period
@@ -541,23 +559,18 @@ class DivergenceModel:
         analyzer = self.analyzers[timeframe]
         analyzer.history = []  # Reset history
         
-        st.write(f"[Model] Processing {len(candles)} candles...")
         for candle in candles:
             result = analyzer.process_candle(candle, prev_candle)
             results.append(result)
             prev_candle = candle
         
         self.current_results = pd.DataFrame(results)
-        st.write(f"[Model] Completed processing {len(results)} candles")
         return self.current_results
     
     def run_trading_backtest(self) -> BacktestResult:
         """Run the trading algorithm on current data"""
         if self.current_results is None or self.current_results.empty:
             raise ValueError("No data available for backtesting")
-        
-        st.write("\n[Model] Starting backtest...")
-        st.write(f"Columns available: {self.current_results.columns.tolist()}")
         
         # Verify required columns exist
         required_cols = ['timestamp', 'close', 'Id_up', 'Id_down']
@@ -567,15 +580,11 @@ class DivergenceModel:
         
         algorithm = TradingAlgorithm()
         result = algorithm.run_backtest(self.current_results)
-        
-        st.write("\n[Model] Backtest completed")
-        st.write(f"Total trades: {result.total_trades}")
         return result
     
     def get_plot_data(self) -> Optional[Dict]:
         """Prepare data for plotting"""
         if self.current_results is None or self.current_results.empty:
-            st.warning("[Model] Warning: No data available for plotting")
             return None
             
         return {
@@ -595,34 +604,342 @@ class DivergenceModel:
     def get_stats(self) -> Optional[Dict]:
         """Get divergence statistics for current timeframe"""
         if self.timeframe not in self.analyzers:
-            st.warning(f"[Model] Warning: No analyzer found for timeframe {self.timeframe}")
             return None
         return self.analyzers[self.timeframe].get_stats_summary()
 
+def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
+    """Create interactive price and divergence plot using Plotly"""
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                       vertical_spacing=0.05,
+                       row_heights=[0.6, 0.2, 0.2],
+                       subplot_titles=(
+                           f"{plot_data['ticker']} Price",
+                           "Divergence Indices",
+                           "Failure Magnitude"
+                       ))
+    
+    # Price plot with failure markers
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['close'],
+            name='Price',
+            line=dict(color=COLORS['primary']),
+            mode='lines'
+        ),
+        row=1, col=1
+    )
+    
+    # Add failure markers if any
+    failure_mask = plot_data['is_failure']
+    if np.any(failure_mask):
+        failure_times = np.array(plot_data['timestamp'])[failure_mask]
+        failure_prices = np.array(plot_data['close'])[failure_mask]
+        
+        fig.add_trace(
+            go.Scatter(
+                x=failure_times,
+                y=failure_prices,
+                name='Divergence Failure',
+                mode='markers',
+                marker=dict(
+                    color=COLORS['negative'],
+                    size=8,
+                    symbol='x'
+                )
+            ),
+            row=1, col=1
+        )
+    
+    # Divergence indices plot
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['Id_up'],
+            name='Id_up',
+            line=dict(color=COLORS['div_up']),
+            mode='lines'
+        ),
+        row=2, col=1
+    )
+    
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['Id_down'],
+            name='Id_down',
+            line=dict(color=COLORS['div_down']),
+            mode='lines'
+        ),
+        row=2, col=1
+    )
+    
+    # Add threshold lines
+    fig.add_hline(
+        y=95, line=dict(color='gray', dash='dash'),
+        row=2, col=1
+    )
+    fig.add_hline(
+        y=5, line=dict(color='gray', dash='dash'),
+        row=2, col=1
+    )
+    
+    # Failure magnitude plot
+    if np.any(failure_mask):
+        failure_magnitudes = np.array(plot_data['failure_magnitude'])
+        failure_magnitudes[~failure_mask] = np.nan
+        
+        fig.add_trace(
+            go.Bar(
+                x=plot_data['timestamp'],
+                y=failure_magnitudes,
+                name='Failure Magnitude',
+                marker_color=COLORS['negative']
+            ),
+            row=3, col=1
+        )
+    
+    # Update layout
+    fig.update_layout(
+        height=800,
+        title_text=f"{plot_data['ticker']} {plot_data['timeframe']} - Last {plot_data['period']}",
+        template='plotly_dark',
+        hovermode='x unified',
+        margin=dict(l=50, r=50, b=50, t=100, pad=4),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    
+    # Update y-axis titles
+    fig.update_yaxes(title_text="Price", row=1, col=1)
+    fig.update_yaxes(title_text="Divergence Index", row=2, col=1)
+    fig.update_yaxes(title_text="Failure %", row=3, col=1)
+    
+    return fig
+
+def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult) -> go.Figure:
+    """Create interactive trade analysis plot using Plotly"""
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                       vertical_spacing=0.1,
+                       row_heights=[0.7, 0.3],
+                       subplot_titles=(
+                           f"{plot_data['ticker']} Price with Trades",
+                           "Divergence Indices"
+                       ))
+    
+    # Price plot with trades
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['close'],
+            name='Price',
+            line=dict(color=COLORS['primary']),
+            mode='lines'
+        ),
+        row=1, col=1
+    )
+    
+    # Add trade markers
+    for trade in backtest_result.trades:
+        # Entry marker
+        fig.add_trace(
+            go.Scatter(
+                x=[trade.entry_time],
+                y=[trade.entry_price],
+                name='Entry' if trade == backtest_result.trades[0] else None,
+                mode='markers',
+                marker=dict(
+                    color=COLORS['positive'] if trade.direction == 'long' else COLORS['negative'],
+                    size=10,
+                    symbol='triangle-up'
+                ),
+                showlegend=False,
+                hoverinfo='text',
+                hovertext=f"""
+                Entry {trade.direction}<br>
+                Time: {trade.entry_time.strftime('%Y-%m-%d %H:%M')}<br>
+                Price: {trade.entry_price:.2f}
+                """
+            ),
+            row=1, col=1
+        )
+        
+        # Exit marker if exists
+        if trade.exit_time:
+            fig.add_trace(
+                go.Scatter(
+                    x=[trade.exit_time],
+                    y=[trade.exit_price],
+                    name='Exit' if trade == backtest_result.trades[0] else None,
+                    mode='markers',
+                    marker=dict(
+                        color=COLORS['positive'] if trade.pnl > 0 else COLORS['negative'],
+                        size=10,
+                        symbol='triangle-down'
+                    ),
+                    showlegend=False,
+                    hoverinfo='text',
+                    hovertext=f"""
+                    Exit {trade.direction}<br>
+                    Time: {trade.exit_time.strftime('%Y-%m-%d %H:%M')}<br>
+                    Price: {trade.exit_price:.2f}<br>
+                    PnL: {trade.pnl:.2f}%
+                    """
+                ),
+                row=1, col=1
+            )
+    
+    # Divergence indices plot
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['Id_up'],
+            name='Id_up',
+            line=dict(color=COLORS['div_up']),
+            mode='lines'
+        ),
+        row=2, col=1
+    )
+    
+    fig.add_trace(
+        go.Scatter(
+            x=plot_data['timestamp'],
+            y=plot_data['Id_down'],
+            name='Id_down',
+            line=dict(color=COLORS['div_down']),
+            mode='lines'
+        ),
+        row=2, col=1
+    )
+    
+    # Add threshold lines
+    fig.add_hline(
+        y=95, line=dict(color='gray', dash='dash'),
+        row=2, col=1
+    )
+    fig.add_hline(
+        y=5, line=dict(color='gray', dash='dash'),
+        row=2, col=1
+    )
+    
+    # Update layout
+    fig.update_layout(
+        height=700,
+        title_text=f"Trade Analysis - {backtest_result.total_trades} Trades (Win Rate: {backtest_result.win_rate:.1%})",
+        template='plotly_dark',
+        hovermode='x unified',
+        margin=dict(l=50, r=50, b=50, t=100, pad=4),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    
+    # Update y-axis titles
+    fig.update_yaxes(title_text="Price", row=1, col=1)
+    fig.update_yaxes(title_text="Divergence Index", row=2, col=1)
+    
+    return fig
+
+def create_metric(label: str, value: Union[str, float], delta: Optional[str] = None):
+    """Create a styled metric component"""
+    st.markdown(
+        f"""
+        <div class="metric-container">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            {f'<div class="metric-delta">{delta}</div>' if delta else ''}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+def create_trade_table(trades: List[Trade]):
+    """Create a styled table of trades"""
+    if not trades:
+        st.warning("No trades to display")
+        return
+    
+    # Prepare trade data
+    trade_data = []
+    for i, trade in enumerate(trades):
+        pnl_class = "positive-pnl" if trade.pnl > 0 else "negative-pnl"
+        trade_data.append({
+            "#": i+1,
+            "Direction": trade.direction,
+            "Entry Time": trade.entry_time.strftime('%Y-%m-%d %H:%M'),
+            "Entry Price": f"{trade.entry_price:.2f}",
+            "Exit Time": trade.exit_time.strftime('%Y-%m-%d %H:%M') if trade.exit_time else "-",
+            "Exit Price": f"{trade.exit_price:.2f}" if trade.exit_price else "-",
+            "PnL (%)": f"<span class='{pnl_class}'>{trade.pnl:.2f}%</span>",
+            "Reason": trade.exit_reason
+        })
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(trade_data)
+    
+    # Display styled table
+    st.markdown(
+        f"""
+        <div class="trade-table">
+            {df.to_html(escape=False, index=False)}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 def main():
-    st.set_page_config(layout="wide", page_title="Kalman Filter Divergence Analyzer")
-    st.title("Kalman Filter Divergence Analyzer")
+    st.set_page_config(
+        layout="wide", 
+        page_title="Kalman Filter Divergence Analyzer",
+        page_icon="📊"
+    )
+    set_theme()
+    
+    st.title("📊 Kalman Filter Divergence Analyzer")
+    st.markdown("""
+    <style>
+    .title {
+        color: #00FFAA;
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Initialize model
     if 'model' not in st.session_state:
         st.session_state.model = DivergenceModel()
+        st.session_state.data_loaded = False
     
     # Sidebar controls
     with st.sidebar:
-        st.header("Settings")
-        ticker = st.text_input("Ticker", value="AAPL")
-        timeframe = st.selectbox(
-            "Timeframe",
-            options=["1m", "5m", "15m", "1h", "1d", "1wk"],
-            index=2
-        )
-        period = st.selectbox(
-            "Period",
-            options=["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"],
-            index=2
-        )
+        st.header("⚙️ Settings")
+        ticker = st.text_input("Ticker Symbol", value="AAPL")
         
-        if st.button("Process Data"):
+        col1, col2 = st.columns(2)
+        with col1:
+            timeframe = st.selectbox(
+                "Timeframe",
+                options=["1m", "5m", "15m", "1h", "1d", "1wk"],
+                index=2
+            )
+        with col2:
+            period = st.selectbox(
+                "Period",
+                options=["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"],
+                index=2
+            )
+        
+        if st.button("🚀 Process Data", use_container_width=True):
             with st.spinner("Processing data..."):
                 try:
                     results = st.session_state.model.process_timeframe(ticker, timeframe, period)
@@ -636,173 +953,101 @@ def main():
                     
                     # Enable backtest button
                     st.session_state.data_loaded = True
+                    st.success("Data processed successfully!")
                 except Exception as e:
                     st.error(f"Error processing data: {str(e)}")
         
-        if st.button("Run Backtest", disabled=not st.session_state.get('data_loaded', False)):
+        if st.button("📈 Run Backtest", 
+                    use_container_width=True,
+                    disabled=not st.session_state.get('data_loaded', False)):
             with st.spinner("Running backtest..."):
                 try:
                     backtest_result = st.session_state.model.run_trading_backtest()
                     st.session_state.backtest_result = backtest_result
+                    st.success("Backtest completed!")
                 except Exception as e:
                     st.error(f"Error running backtest: {str(e)}")
     
     # Main content area
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Divergence Statistics")
-        if 'stats' in st.session_state and st.session_state.stats:
-            stats = st.session_state.stats
-            st.metric("Total Candles Analyzed", stats['total_candles'])
-            st.metric("Failed Predictions", f"{stats['failed_candles']} ({stats['failure_percentage']:.2f}%)")
-            st.metric("Average Failure Magnitude", f"{stats['average_failure_magnitude']:.2f}%")
-            
-            if stats['recent_failures']:
-                st.write("Recent Failures:")
-                st.write([f"{x:.2f}%" for x in stats['recent_failures']])
-        else:
-            st.info("No statistics available. Process data first.")
-    
-    with col2:
-        st.subheader("Backtest Results")
-        if 'backtest_result' in st.session_state:
-            result = st.session_state.backtest_result
-            st.metric("Total Trades", result.total_trades)
-            st.metric("Profitable Trades", result.profitable_trades)
-            st.metric("Win Rate", f"{result.win_rate:.1%}")
-            st.metric("Avg Profit", f"{result.avg_profit:.2f}%")
-            st.metric("Max Drawdown", f"{result.max_drawdown:.2f}%")
-            st.metric("Sharpe Ratio", f"{result.sharpe_ratio:.2f}")
-        else:
-            st.info("No backtest results available. Run backtest first.")
-    
-    # Plot area
-    st.subheader("Analysis Plots")
-    if 'plot_data' in st.session_state and st.session_state.plot_data:
-        plot_data = st.session_state.plot_data
+    if st.session_state.get('data_loaded', False):
+        # Stats and metrics
+        st.subheader("📊 Performance Metrics")
+        col1, col2, col3, col4 = st.columns(4)
         
-        # Create tabs for different plot views
-        tab1, tab2 = st.tabs(["Price and Divergence", "Trade Analysis"])
+        with col1:
+            if 'stats' in st.session_state and st.session_state.stats:
+                stats = st.session_state.stats
+                create_metric("Total Candles", stats['total_candles'])
+                create_metric("Failed Predictions", 
+                            f"{stats['failed_candles']}",
+                            f"{stats['failure_percentage']:.1f}%")
         
-        with tab1:
-            fig1, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
-            fig1.subplots_adjust(hspace=0.3)
-            
-            # Plot price with failure markers
-            ax1.plot(plot_data['timestamp'], plot_data['close'], label='Price', color='black')
-            
-            # Mark failure points
-            failure_mask = plot_data['is_failure']
-            if np.any(failure_mask):
-                failure_times = np.array(plot_data['timestamp'])[failure_mask]
-                failure_prices = np.array(plot_data['close'])[failure_mask]
-                ax1.scatter(failure_times, failure_prices, color='red', label='Divergence Failure', zorder=5)
-            
-            ax1.set_ylabel('Price')
-            ax1.set_title(f"{plot_data['ticker']} {plot_data['timeframe']} - Last {plot_data['period']}")
-            ax1.legend()
-            ax1.grid(True)
-            
-            # Plot divergence indices
-            ax2.plot(plot_data['timestamp'], plot_data['Id_up'], label='Id_up', color='green')
-            ax2.plot(plot_data['timestamp'], plot_data['Id_down'], label='Id_down', color='red')
-            ax2.axhline(95, color='gray', linestyle='--', alpha=0.5)
-            ax2.axhline(5, color='gray', linestyle='--', alpha=0.5)
-            ax2.set_ylabel('Divergence Index')
-            ax2.legend()
-            ax2.grid(True)
-            
-            # Plot failure magnitudes
-            if np.any(failure_mask):
-                failure_magnitudes = np.array(plot_data['failure_magnitude'])
-                failure_magnitudes[~failure_mask] = np.nan
-                ax3.bar(plot_data['timestamp'], failure_magnitudes, color='red', label='Failure Magnitude')
-            
-            ax3.set_ylabel('Failure Magnitude (%)')
-            ax3.set_xlabel('Date')
-            ax3.legend()
-            ax3.grid(True)
-            
-            # Rotate x-axis labels
-            plt.setp(ax3.get_xticklabels(), rotation=45, ha='right')
-            
-            st.pyplot(fig1)
+        with col2:
+            if 'stats' in st.session_state and st.session_state.stats:
+                stats = st.session_state.stats
+                create_metric("Avg Failure Magnitude", 
+                             f"{stats['average_failure_magnitude']:.2f}%")
+                if stats['recent_failures']:
+                    create_metric("Recent Failures", 
+                                ", ".join([f"{x:.1f}%" for x in stats['recent_failures']]))
         
-        with tab2:
+        with col3:
             if 'backtest_result' in st.session_state:
                 result = st.session_state.backtest_result
-                
-                fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-                fig2.subplots_adjust(hspace=0.3)
-                
-                # Plot price with trade markers
-                ax1.plot(plot_data['timestamp'], plot_data['close'], label='Price', color='black')
-                
-                # Mark trade entries and exits
-                for trade in result.trades:
-                    entry_color = 'green' if trade.direction == 'long' else 'red'
-                    exit_color = 'red' if trade.pnl and trade.pnl > 0 else 'green'
-                    
-                    ax1.scatter(
-                        trade.entry_time,
-                        trade.entry_price,
-                        color=entry_color,
-                        marker='^',
-                        s=100,
-                        label='Entry' if trade == result.trades[0] else ""
-                    )
-                    
-                    if trade.exit_time:
-                        ax1.scatter(
-                            trade.exit_time,
-                            trade.exit_price,
-                            color=exit_color,
-                            marker='v',
-                            s=100,
-                            label='Exit' if trade == result.trades[0] else ""
-                        )
-                
-                ax1.set_ylabel('Price')
-                ax1.set_title(f"{plot_data['ticker']} {plot_data['timeframe']} - Trade Analysis")
-                ax1.legend()
-                ax1.grid(True)
-                
-                # Plot divergence indices
-                ax2.plot(plot_data['timestamp'], plot_data['Id_up'], label='Id_up', color='green')
-                ax2.plot(plot_data['timestamp'], plot_data['Id_down'], label='Id_down', color='red')
-                ax2.axhline(95, color='gray', linestyle='--', alpha=0.5)
-                ax2.axhline(5, color='gray', linestyle='--', alpha=0.5)
-                ax2.set_ylabel('Divergence Index')
-                ax2.legend()
-                ax2.grid(True)
-                
-                # Rotate x-axis labels
-                plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
-                
-                st.pyplot(fig2)
-            else:
-                st.info("Run backtest to see trade analysis")
-    else:
-        st.info("Process data to see plots")
-    
-    # Results table
-    st.subheader("Recent Results")
-    if 'results' in st.session_state and st.session_state.results is not None:
-        # Show last 200 results
-        display_df = st.session_state.results.tail(200).copy()
-        display_df['timestamp'] = display_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M')
-        display_df['close'] = display_df['close'].round(2)
-        display_df['Id_up'] = display_df['Id_up'].round(1)
-        display_df['Id_down'] = display_df['Id_down'].round(1)
-        display_df['failure_magnitude'] = display_df['failure_magnitude'].round(2)
+                create_metric("Total Trades", result.total_trades)
+                create_metric("Profitable Trades", 
+                            result.profitable_trades,
+                            f"{result.win_rate:.1%}")
         
-        st.dataframe(
-            display_df[['timestamp', 'close', 'Id_up', 'Id_down', 'is_failure', 'failure_magnitude']],
-            height=400
-        )
+        with col4:
+            if 'backtest_result' in st.session_state:
+                result = st.session_state.backtest_result
+                create_metric("Avg Profit", f"{result.avg_profit:.2f}%")
+                create_metric("Max Drawdown", f"{result.max_drawdown:.2f}%")
+                create_metric("Sharpe Ratio", f"{result.sharpe_ratio:.2f}")
+        
+        # Plot area
+        st.subheader("📈 Analysis Charts")
+        if 'plot_data' in st.session_state and st.session_state.plot_data:
+            plot_data = st.session_state.plot_data
+            
+            # Create tabs for different plot views
+            tab1, tab2 = st.tabs(["Price and Divergence", "Trade Analysis"])
+            
+            with tab1:
+                fig = create_price_divergence_plot(plot_data)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with tab2:
+                if 'backtest_result' in st.session_state:
+                    fig = create_trade_analysis_plot(plot_data, st.session_state.backtest_result)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("Run backtest to see trade analysis")
+        
+        # Results table
+        st.subheader("📋 Recent Results")
+        if 'results' in st.session_state and st.session_state.results is not None:
+            # Show last 200 results
+            display_df = st.session_state.results.tail(200).copy()
+            display_df['timestamp'] = display_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M')
+            display_df['close'] = display_df['close'].round(2)
+            display_df['Id_up'] = display_df['Id_up'].round(1)
+            display_df['Id_down'] = display_df['Id_down'].round(1)
+            display_df['failure_magnitude'] = display_df['failure_magnitude'].round(2)
+            
+            st.dataframe(
+                display_df[['timestamp', 'close', 'Id_up', 'Id_down', 'is_failure', 'failure_magnitude']],
+                height=400,
+                use_container_width=True
+            )
+        
+        # Trade details
+        if 'backtest_result' in st.session_state:
+            st.subheader("💼 Trade Details")
+            create_trade_table(st.session_state.backtest_result.trades)
     else:
-        st.info("No results to display. Process data first.")
+        st.info("👈 Enter settings and click 'Process Data' to begin analysis")
 
 if __name__ == "__main__":
     main()
