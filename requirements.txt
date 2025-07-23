@@ -1,9 +1,4 @@
+yfinance
 numpy
 pandas
-pandas_ta
-yfinance
-scipy
-scikit-learn
-hmmlearn
-streamlit
 matplotlib
