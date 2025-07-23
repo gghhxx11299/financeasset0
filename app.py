@@ -944,14 +944,15 @@ def main():
         st.markdown("""
         <div class="description">
         <h3>About This Tool</h3>
-        <p>This application uses a Kalman Filter to analyze price divergences in financial markets. 
-        It identifies potential reversal points by tracking the relationship between price movements 
-        and divergence indices (Id_up and Id_down).</p>
+        <p>Kalman Filter Divergence Analysis (KFDA) is a novel stock forecasting framework that blends price action structure with signal processing to model and predict directional market behavior. Unlike traditional indicators that rely heavily on price, volume, or trend-following logic, KFDA focuses on structural divergence—capturing the misalignment between actual price behavior and expected movement based on candle formations.</p>
         
-        <h4>Key Features:</h4>
+        <h4>Core Innovation: The Id Metric:</h4>
         <ul>
-            <li>Real-time divergence detection using Kalman filtering</li>
-            <li>Multi-timeframe analysis (1m to 1wk)</li>
+            <li>Id_up represents the probability (expressed as a percentage) that the stock is expected to rise based on the filtered divergence signals.</li>
+            <li>Id_down mirrors this by showing the probability of a downward move.</li>
+        </ul>
+        <h4> Description </h4>
+        <ul>
             <li>Backtesting capability with trade simulation</li>
             <li>Visualization of divergence failures and performance metrics</li>
             <li>Interactive charts with Plotly</li>
