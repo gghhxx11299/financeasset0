@@ -957,7 +957,14 @@ def main():
             <li>Visualization of divergence failures and performance metrics</li>
             <li>Interactive charts with Plotly</li>
         </ul>
-        
+        <h4> Performance Dashboard
+         The KFDA tool provides a complete dashboard that includes
+        </h4>
+        <ul>
+            <li> Candle analysis metrics (total candles, divergence failures</li>
+            <li>Backtested performance (Sharpe ratio, max drawdown, profit stats)</li>
+            <li>Real-time probabilistic signals</li>
+        </ul>
         <h4>How It Works:</h4>
         <p>The algorithm calculates two divergence indices (Id_up and Id_down) that measure the 
         relationship between price movements and their divergences. When these indices cross certain 
