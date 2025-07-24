@@ -1061,7 +1061,7 @@ def main():
         with col2:
             period = st.selectbox(
                 "Period",
-                options=["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y","5y"],
+                options=["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"],
                 index=2
             )
         
