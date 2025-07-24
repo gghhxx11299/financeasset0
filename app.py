@@ -15,42 +15,60 @@ from plotly.subplots import make_subplots
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Custom theme colors
-COLORS = {
-    'background': '#1E1E1E',
-    'text': '#FFFFFF',
-    'primary': '#00FFAA',
-    'secondary': '#0088FF',
-    'accent': '#FF00AA',
-    'positive': '#00FF88',
-    'negative': '#FF4444',
-    'div_up': '#00FFAA',
-    'div_down': '#FF4444'
+# Theme colors for both dark and light modes
+THEMES = {
+    'dark': {
+        'background': '#1E1E1E',
+        'text': '#FFFFFF',
+        'primary': '#00FFAA',
+        'secondary': '#0088FF',
+        'accent': '#FF00AA',
+        'positive': '#00FF88',
+        'negative': '#FF4444',
+        'div_up': '#00FFAA',
+        'div_down': '#FF4444',
+        'table_background': '#2A2A2A',
+        'plot_template': 'plotly_dark'
+    },
+    'light': {
+        'background': '#FFFFFF',
+        'text': '#000000',
+        'primary': '#0066CC',
+        'secondary': '#FF6600',
+        'accent': '#9900FF',
+        'positive': '#009933',
+        'negative': '#FF0000',
+        'div_up': '#009933',
+        'div_down': '#FF0000',
+        'table_background': '#F5F5F5',
+        'plot_template': 'plotly_white'
+    }
 }
 
-# Apply custom theme
-def set_theme():
+# Apply custom theme based on mode
+def set_theme(mode='dark'):
+    colors = THEMES[mode]
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-color: {COLORS['background']};
-            color: {COLORS['text']};
+            background-color: {colors['background']};
+            color: {colors['text']};
         }}
         .css-1d391kg {{
-            background-color: {COLORS['background']};
+            background-color: {colors['background']};
         }}
         .st-bb {{
-            background-color: {COLORS['background']};
+            background-color: {colors['background']};
         }}
         .st-at {{
-            background-color: {COLORS['primary']};
+            background-color: {colors['primary']};
         }}
         .st-ax {{
-            color: {COLORS['text']};
+            color: {colors['text']};
         }}
         .metric-container {{
-            background-color: #2A2A2A;
+            background-color: {colors['table_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 5px;
@@ -58,36 +76,36 @@ def set_theme():
         }}
         .metric-label {{
             font-size: 1rem;
-            color: {COLORS['text']};
+            color: {colors['text']};
             opacity: 0.8;
         }}
         .metric-value {{
             font-size: 1.5rem;
             font-weight: bold;
-            color: {COLORS['primary']};
+            color: {colors['primary']};
         }}
         .positive-pnl {{
-            color: {COLORS['positive']};
+            color: {colors['positive']};
         }}
         .negative-pnl {{
-            color: {COLORS['negative']};
+            color: {colors['negative']};
         }}
         .trade-table {{
-            background-color: #2A2A2A;
+            background-color: {colors['table_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 5px;
         }}
         .disclaimer {{
-            background-color: #2A2A2A;
+            background-color: {colors['table_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 10px 0;
             font-size: 0.8rem;
-            color: #AAAAAA;
+            color: {colors['text']}80;
         }}
         .description {{
-            background-color: #2A2A2A;
+            background-color: {colors['table_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 10px 0;
@@ -95,13 +113,14 @@ def set_theme():
         .author {{
             text-align: right;
             font-style: italic;
-            color: {COLORS['secondary']};
+            color: {colors['secondary']};
             margin-top: 20px;
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
+    return colors
 
 @dataclass
 class Candle:
@@ -631,7 +650,7 @@ class DivergenceModel:
             return None
         return self.analyzers[self.timeframe].get_stats_summary()
 
-def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
+def create_price_divergence_plot(plot_data: Dict, colors: Dict) -> go.Figure:
     """Create interactive price and divergence plot using Plotly"""
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                        vertical_spacing=0.05,
@@ -648,7 +667,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
             x=plot_data['timestamp'],
             y=plot_data['close'],
             name='Price',
-            line=dict(color=COLORS['primary']),
+            line=dict(color=colors['primary']),
             mode='lines'
         ),
         row=1, col=1
@@ -667,7 +686,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
                 name='Divergence Failure',
                 mode='markers',
                 marker=dict(
-                    color=COLORS['negative'],
+                    color=colors['negative'],
                     size=8,
                     symbol='x'
                 )
@@ -681,7 +700,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
             x=plot_data['timestamp'],
             y=plot_data['Id_up'],
             name='Id_up',
-            line=dict(color=COLORS['div_up']),
+            line=dict(color=colors['div_up']),
             mode='lines'
         ),
         row=2, col=1
@@ -692,7 +711,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
             x=plot_data['timestamp'],
             y=plot_data['Id_down'],
             name='Id_down',
-            line=dict(color=COLORS['div_down']),
+            line=dict(color=colors['div_down']),
             mode='lines'
         ),
         row=2, col=1
@@ -718,7 +737,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
                 x=plot_data['timestamp'],
                 y=failure_magnitudes,
                 name='Failure Magnitude',
-                marker_color=COLORS['negative']
+                marker_color=colors['negative']
             ),
             row=3, col=1
         )
@@ -727,7 +746,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
     fig.update_layout(
         height=800,
         title_text=f"{plot_data['ticker']} {plot_data['timeframe']} - Last {plot_data['period']}",
-        template='plotly_dark',
+        template=colors['plot_template'],
         hovermode='x unified',
         margin=dict(l=50, r=50, b=50, t=100, pad=4),
         legend=dict(
@@ -746,7 +765,7 @@ def create_price_divergence_plot(plot_data: Dict) -> go.Figure:
     
     return fig
 
-def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult) -> go.Figure:
+def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult, colors: Dict) -> go.Figure:
     """Create interactive trade analysis plot using Plotly"""
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                        vertical_spacing=0.1,
@@ -762,7 +781,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
             x=plot_data['timestamp'],
             y=plot_data['close'],
             name='Price',
-            line=dict(color=COLORS['primary']),
+            line=dict(color=colors['primary']),
             mode='lines'
         ),
         row=1, col=1
@@ -778,7 +797,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
                 name='Entry' if trade == backtest_result.trades[0] else None,
                 mode='markers',
                 marker=dict(
-                    color=COLORS['positive'] if trade.direction == 'long' else COLORS['negative'],
+                    color=colors['positive'] if trade.direction == 'long' else colors['negative'],
                     size=10,
                     symbol='triangle-up'
                 ),
@@ -802,7 +821,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
                     name='Exit' if trade == backtest_result.trades[0] else None,
                     mode='markers',
                     marker=dict(
-                        color=COLORS['positive'] if trade.pnl > 0 else COLORS['negative'],
+                        color=colors['positive'] if trade.pnl > 0 else colors['negative'],
                         size=10,
                         symbol='triangle-down'
                     ),
@@ -824,7 +843,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
             x=plot_data['timestamp'],
             y=plot_data['Id_up'],
             name='Id_up',
-            line=dict(color=COLORS['div_up']),
+            line=dict(color=colors['div_up']),
             mode='lines'
         ),
         row=2, col=1
@@ -835,7 +854,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
             x=plot_data['timestamp'],
             y=plot_data['Id_down'],
             name='Id_down',
-            line=dict(color=COLORS['div_down']),
+            line=dict(color=colors['div_down']),
             mode='lines'
         ),
         row=2, col=1
@@ -855,7 +874,7 @@ def create_trade_analysis_plot(plot_data: Dict, backtest_result: BacktestResult)
     fig.update_layout(
         height=700,
         title_text=f"Trade Analysis - {backtest_result.total_trades} Trades (Win Rate: {backtest_result.win_rate:.1%})",
-        template='plotly_dark',
+        template=colors['plot_template'],
         hovermode='x unified',
         margin=dict(l=50, r=50, b=50, t=100, pad=4),
         legend=dict(
@@ -926,22 +945,28 @@ def main():
         page_title="Kalman Filter Divergence Analyzer",
         page_icon="📊"
     )
-    set_theme()
+    
+    # Add theme selector to sidebar
+    with st.sidebar:
+        theme = st.selectbox("Theme", ["dark", "light"], index=0)
+    
+    # Set theme based on selection
+    colors = set_theme(theme)
     
     st.title("📊 Kalman Filter Divergence Analyzer")
-    st.markdown("""
+    st.markdown(f"""
     <style>
-    .title {
-        color: #00FFAA;
+    .title {{
+        color: {colors['primary']};
         font-size: 2.5rem;
         margin-bottom: 20px;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
     
     # Description section
     with st.expander("📝 Description", expanded=True):
-        st.markdown("""
+        st.markdown(f"""
         <div class="description">
         <h3>About This Tool</h3>
         <p>Kalman Filter Divergence Analysis (KFDA) is a novel stock forecasting framework that blends price action structure with signal processing to model and predict directional market behavior. Unlike traditional indicators that rely heavily on price, volume, or trend-following logic, KFDA focuses on structural divergence—capturing the misalignment between actual price behavior and expected movement based on candle formations.</p>
@@ -1027,7 +1052,7 @@ def main():
                     st.error(f"Error running backtest: {str(e)}")
         
         # Disclaimer section
-        st.markdown("""
+        st.markdown(f"""
         <div class="disclaimer">
         <h4>⚠️ Disclaimer</h4>
         <p>This tool is for educational and research purposes only. The analysis provided 
@@ -1038,7 +1063,7 @@ def main():
         """, unsafe_allow_html=True)
         
         # Author credit
-        st.markdown("""
+        st.markdown(f"""
         <div class="author">
         <p>Developed by Gebreal Mulugeta</p>
         </div>
@@ -1091,12 +1116,12 @@ def main():
             tab1, tab2 = st.tabs(["Price and Divergence", "Trade Analysis"])
             
             with tab1:
-                fig = create_price_divergence_plot(plot_data)
+                fig = create_price_divergence_plot(plot_data, colors)
                 st.plotly_chart(fig, use_container_width=True)
             
             with tab2:
                 if 'backtest_result' in st.session_state:
-                    fig = create_trade_analysis_plot(plot_data, st.session_state.backtest_result)
+                    fig = create_trade_analysis_plot(plot_data, st.session_state.backtest_result, colors)
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.info("Run backtest to see trade analysis")
