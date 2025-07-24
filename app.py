@@ -28,7 +28,10 @@ THEMES = {
         'div_up': '#00FFAA',
         'div_down': '#FF4444',
         'table_background': '#2A2A2A',
-        'plot_template': 'plotly_dark'
+        'plot_template': 'plotly_dark',
+        'card_background': '#2A2A2A',
+        'border': '#444444',
+        'hover': '#333333'
     },
     'light': {
         'background': '#FFFFFF',
@@ -41,7 +44,10 @@ THEMES = {
         'div_up': '#009933',
         'div_down': '#FF0000',
         'table_background': '#F5F5F5',
-        'plot_template': 'plotly_white'
+        'plot_template': 'plotly_white',
+        'card_background': '#F8F9FA',
+        'border': '#E0E0E0',
+        'hover': '#EEEEEE'
     }
 }
 
@@ -51,70 +57,192 @@ def set_theme(mode='dark'):
     st.markdown(
         f"""
         <style>
+        /* Base styles */
         .stApp {{
             background-color: {colors['background']};
             color: {colors['text']};
         }}
-        .css-1d391kg {{
-            background-color: {colors['background']};
+        
+        /* Text elements */
+        h1, h2, h3, h4, h5, h6 {{
+            color: {colors['primary']};
         }}
-        .st-bb {{
-            background-color: {colors['background']};
-        }}
-        .st-at {{
-            background-color: {colors['primary']};
-        }}
-        .st-ax {{
+        
+        p, div, span {{
             color: {colors['text']};
         }}
+        
+        /* Sidebar */
+        .css-1d391kg, .st-emotion-cache-1cypcdb {{
+            background-color: {colors['card_background']} !important;
+            border-right: 1px solid {colors['border']};
+        }}
+        
+        /* Input widgets */
+        .stTextInput input, .stSelectbox select, .stButton button {{
+            background-color: {colors['card_background']};
+            color: {colors['text']};
+            border: 1px solid {colors['border']};
+        }}
+        
+        .stTextInput label, .stSelectbox label {{
+            color: {colors['text']};
+        }}
+        
+        /* Buttons */
+        .stButton>button {{
+            background-color: {colors['primary']};
+            color: {colors['background']};
+            border: none;
+            transition: all 0.3s;
+        }}
+        
+        .stButton>button:hover {{
+            background-color: {colors['secondary']};
+        }}
+        
+        /* Metrics */
         .metric-container {{
-            background-color: {colors['table_background']};
+            background-color: {colors['card_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 5px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid {colors['border']};
         }}
+        
         .metric-label {{
             font-size: 1rem;
             color: {colors['text']};
             opacity: 0.8;
         }}
+        
         .metric-value {{
             font-size: 1.5rem;
             font-weight: bold;
             color: {colors['primary']};
         }}
-        .positive-pnl {{
-            color: {colors['positive']};
-        }}
-        .negative-pnl {{
-            color: {colors['negative']};
-        }}
+        
+        /* Tables */
         .trade-table {{
-            background-color: {colors['table_background']};
+            background-color: {colors['card_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 5px;
+            border: 1px solid {colors['border']};
         }}
-        .disclaimer {{
+        
+        table {{
+            color: {colors['text']} !important;
+            width: 100%;
+        }}
+        
+        th {{
+            background-color: {colors['primary']} !important;
+            color: {colors['background']} !important;
+        }}
+        
+        tr:nth-child(even) {{
             background-color: {colors['table_background']};
+        }}
+        
+        tr:hover {{
+            background-color: {colors['hover']} !important;
+        }}
+        
+        /* Expanders */
+        .st-expander {{
+            border: 1px solid {colors['border']} !important;
+            border-radius: 8px !important;
+        }}
+        
+        .st-expanderHeader {{
+            background-color: {colors['card_background']} !important;
+            color: {colors['primary']} !important;
+        }}
+        
+        /* Tabs */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 10px;
+        }}
+        
+        .stTabs [data-baseweb="tab"] {{
+            background-color: {colors['card_background']};
+            border-radius: 8px 8px 0 0 !important;
+            border: 1px solid {colors['border']} !important;
+            padding: 8px 16px;
+            transition: all 0.3s;
+        }}
+        
+        .stTabs [aria-selected="true"] {{
+            background-color: {colors['primary']} !important;
+            color: {colors['background']} !important;
+        }}
+        
+        /* Dataframe styling */
+        .dataframe {{
+            background-color: {colors['card_background']} !important;
+            color: {colors['text']} !important;
+        }}
+        
+        .dataframe thead th {{
+            background-color: {colors['primary']} !important;
+            color: {colors['background']} !important;
+        }}
+        
+        /* Special classes */
+        .positive-pnl {{
+            color: {colors['positive']} !important;
+            font-weight: bold;
+        }}
+        
+        .negative-pnl {{
+            color: {colors['negative']} !important;
+            font-weight: bold;
+        }}
+        
+        .disclaimer {{
+            background-color: {colors['card_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 10px 0;
             font-size: 0.8rem;
-            color: {colors['text']}80;
+            color: {colors['text']};
+            border: 1px solid {colors['border']};
         }}
+        
         .description {{
-            background-color: {colors['table_background']};
+            background-color: {colors['card_background']};
             border-radius: 10px;
             padding: 15px;
             margin: 10px 0;
+            border: 1px solid {colors['border']};
         }}
+        
         .author {{
             text-align: right;
             font-style: italic;
             color: {colors['secondary']};
             margin-top: 20px;
+        }}
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {{
+            width: 8px;
+            height: 8px;
+        }}
+        
+        ::-webkit-scrollbar-track {{
+            background: {colors['background']};
+        }}
+        
+        ::-webkit-scrollbar-thumb {{
+            background: {colors['primary']};
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb:hover {{
+            background: {colors['secondary']};
         }}
         </style>
         """,
