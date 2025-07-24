@@ -18,41 +18,41 @@ logger = logging.getLogger(__name__)
 # Theme colors for both dark and light modes
 THEMES = {
     'dark': {
-        'background': '#1E1E1E',
+        'background': '#121212',
         'text': '#FFFFFF',
-        'primary': '#00FFAA',
-        'secondary': '#0088FF',
-        'accent': '#FF00AA',
-        'positive': '#00FF88',
-        'negative': '#FF4444',
-        'div_up': '#00FFAA',
-        'div_down': '#FF4444',
-        'table_background': '#2A2A2A',
+        'primary': '#1E88E5',
+        'secondary': '#FF5722',
+        'accent': '#4CAF50',
+        'positive': '#4CAF50',
+        'negative': '#F44336',
+        'div_up': '#4CAF50',
+        'div_down': '#F44336',
+        'table_background': '#1E1E1E',
         'plot_template': 'plotly_dark',
-        'card_background': '#2A2A2A',
-        'border': '#444444',
+        'card_background': '#1E1E1E',
+        'border': '#424242',
         'hover': '#333333'
     },
     'light': {
         'background': '#FFFFFF',
         'text': '#000000',
-        'primary': '#0066CC',
-        'secondary': '#FF6600',
-        'accent': '#9900FF',
-        'positive': '#009933',
-        'negative': '#FF0000',
-        'div_up': '#009933',
-        'div_down': '#FF0000',
+        'primary': '#1976D2',
+        'secondary': '#E53935',
+        'accent': '#43A047',
+        'positive': '#43A047',
+        'negative': '#E53935',
+        'div_up': '#43A047',
+        'div_down': '#E53935',
         'table_background': '#F5F5F5',
         'plot_template': 'plotly_white',
-        'card_background': '#F8F9FA',
+        'card_background': '#FAFAFA',
         'border': '#E0E0E0',
         'hover': '#EEEEEE'
     }
 }
 
-# Apply custom theme based on mode
 def set_theme(mode='dark'):
+    """Apply clean theme based on selected mode"""
     colors = THEMES[mode]
     st.markdown(
         f"""
@@ -66,88 +66,76 @@ def set_theme(mode='dark'):
         /* Text elements */
         h1, h2, h3, h4, h5, h6 {{
             color: {colors['primary']};
-        }}
-        
-        p, div, span {{
-            color: {colors['text']};
-        }}
-        
-        /* Sidebar */
-        .css-1d391kg, .st-emotion-cache-1cypcdb {{
-            background-color: {colors['card_background']} !important;
-            border-right: 1px solid {colors['border']};
+            margin-bottom: 0.5rem;
         }}
         
         /* Input widgets */
-        .stTextInput input, .stSelectbox select, .stButton button {{
+        .stTextInput input, .stSelectbox select, .stTextArea textarea, 
+        .stDateInput input, .stNumberInput input {{
             background-color: {colors['card_background']};
             color: {colors['text']};
             border: 1px solid {colors['border']};
-        }}
-        
-        .stTextInput label, .stSelectbox label {{
-            color: {colors['text']};
         }}
         
         /* Buttons */
         .stButton>button {{
             background-color: {colors['primary']};
-            color: {colors['background']};
+            color: white;
             border: none;
-            transition: all 0.3s;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
         }}
         
         .stButton>button:hover {{
             background-color: {colors['secondary']};
+            color: white;
         }}
         
         /* Metrics */
         .metric-container {{
             background-color: {colors['card_background']};
-            border-radius: 10px;
-            padding: 15px;
-            margin: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
             border: 1px solid {colors['border']};
         }}
         
         .metric-label {{
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: {colors['text']};
-            opacity: 0.8;
+            opacity: 0.9;
         }}
         
         .metric-value {{
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: bold;
             color: {colors['primary']};
         }}
         
-        /* Tables */
-        .trade-table {{
-            background-color: {colors['card_background']};
-            border-radius: 10px;
-            padding: 15px;
-            margin: 5px;
-            border: 1px solid {colors['border']};
+        .metric-delta {{
+            font-size: 0.8rem;
+            color: {colors['text']};
+            opacity: 0.8;
         }}
         
+        /* Tables */
         table {{
             color: {colors['text']} !important;
-            width: 100%;
         }}
         
         th {{
             background-color: {colors['primary']} !important;
-            color: {colors['background']} !important;
+            color: white !important;
         }}
         
         tr:nth-child(even) {{
-            background-color: {colors['table_background']};
+            background-color: {colors['table_background']} !important;
         }}
         
-        tr:hover {{
-            background-color: {colors['hover']} !important;
+        /* Dataframe styling */
+        .dataframe {{
+            background-color: {colors['card_background']} !important;
         }}
         
         /* Expanders */
@@ -158,36 +146,12 @@ def set_theme(mode='dark'):
         
         .st-expanderHeader {{
             background-color: {colors['card_background']} !important;
-            color: {colors['primary']} !important;
         }}
         
         /* Tabs */
-        .stTabs [data-baseweb="tab-list"] {{
-            gap: 10px;
-        }}
-        
-        .stTabs [data-baseweb="tab"] {{
-            background-color: {colors['card_background']};
-            border-radius: 8px 8px 0 0 !important;
-            border: 1px solid {colors['border']} !important;
-            padding: 8px 16px;
-            transition: all 0.3s;
-        }}
-        
-        .stTabs [aria-selected="true"] {{
-            background-color: {colors['primary']} !important;
-            color: {colors['background']} !important;
-        }}
-        
-        /* Dataframe styling */
-        .dataframe {{
-            background-color: {colors['card_background']} !important;
-            color: {colors['text']} !important;
-        }}
-        
-        .dataframe thead th {{
-            background-color: {colors['primary']} !important;
-            color: {colors['background']} !important;
+        .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
+            font-size: 1rem;
+            font-weight: 500;
         }}
         
         /* Special classes */
@@ -201,48 +165,22 @@ def set_theme(mode='dark'):
             font-weight: bold;
         }}
         
-        .disclaimer {{
+        .info-box {{
             background-color: {colors['card_background']};
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            font-size: 0.8rem;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border: 1px solid {colors['border']};
+        }}
+        
+        /* Streamlit component overrides */
+        .stSlider .st-ae, .stSlider .st-af {{
+            background-color: {colors['primary']};
+        }}
+        
+        div[data-baseweb="select"] > div {{
+            background-color: {colors['card_background']};
             color: {colors['text']};
-            border: 1px solid {colors['border']};
-        }}
-        
-        .description {{
-            background-color: {colors['card_background']};
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            border: 1px solid {colors['border']};
-        }}
-        
-        .author {{
-            text-align: right;
-            font-style: italic;
-            color: {colors['secondary']};
-            margin-top: 20px;
-        }}
-        
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {{
-            width: 8px;
-            height: 8px;
-        }}
-        
-        ::-webkit-scrollbar-track {{
-            background: {colors['background']};
-        }}
-        
-        ::-webkit-scrollbar-thumb {{
-            background: {colors['primary']};
-            border-radius: 4px;
-        }}
-        
-        ::-webkit-scrollbar-thumb:hover {{
-            background: {colors['secondary']};
         }}
         </style>
         """,
@@ -1060,7 +998,7 @@ def create_trade_table(trades: List[Trade]):
     # Display styled table
     st.markdown(
         f"""
-        <div class="trade-table">
+        <div style="overflow-x: auto;">
             {df.to_html(escape=False, index=False)}
         </div>
         """,
@@ -1076,53 +1014,30 @@ def main():
     
     # Add theme selector to sidebar
     with st.sidebar:
+        st.title("Settings")
         theme = st.selectbox("Theme", ["dark", "light"], index=0)
     
     # Set theme based on selection
     colors = set_theme(theme)
     
-    st.title("📊 Kalman Filter Divergence Analyzer")
-    st.markdown(f"""
-    <style>
-    .title {{
-        color: {colors['primary']};
-        font-size: 2.5rem;
-        margin-bottom: 20px;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+    st.title("Kalman Filter Divergence Analyzer")
     
     # Description section
-    with st.expander("📝 Description", expanded=True):
-        st.markdown(f"""
-        <div class="description">
+    with st.expander("Description", expanded=True):
+        st.markdown("""
+        <div class="info-box">
         <h3>About This Tool</h3>
-        <p>Kalman Filter Divergence Analysis (KFDA) is a novel stock forecasting framework that blends price action structure with signal processing to model and predict directional market behavior. Unlike traditional indicators that rely heavily on price, volume, or trend-following logic, KFDA focuses on structural divergence—capturing the misalignment between actual price behavior and expected movement based on candle formations.</p>
+        <p>This tool uses Kalman filtering to analyze price divergences and generate trading signals. 
+        It calculates two divergence indices (Id_up and Id_down) that measure the relationship between 
+        price movements and their divergences.</p>
         
-        <h4>Core Innovation: The Id Metric:</h4>
+        <h4>Key Features:</h4>
         <ul>
-            <li>Id_up represents the probability (expressed as a percentage) that the stock is expected to rise based on the filtered divergence signals.</li>
-            <li>Id_down mirrors this by showing the probability of a downward move.</li>
+            <li>Real-time divergence analysis</li>
+            <li>Backtesting capability</li>
+            <li>Interactive visualization</li>
+            <li>Performance metrics</li>
         </ul>
-        <h4> Description </h4>
-        <ul>
-            <li>Backtesting capability with trade simulation</li>
-            <li>Visualization of divergence failures and performance metrics</li>
-            <li>Interactive charts with Plotly</li>
-        </ul>
-        <h4> Performance Dashboard
-         The KFDA tool provides a complete dashboard that includes
-        </h4>
-        <ul>
-            <li> Candle analysis metrics (total candles, divergence failures</li>
-            <li>Backtested performance (Sharpe ratio, max drawdown, profit stats)</li>
-            <li>Real-time probabilistic signals</li>
-        </ul>
-        <h4>How It Works:</h4>
-        <p>The algorithm calculates two divergence indices (Id_up and Id_down) that measure the 
-        relationship between price movements and their divergences. When these indices cross certain 
-        thresholds, they generate trading signals. The Kalman filter helps smooth these signals 
-        and reduce noise.</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1133,7 +1048,7 @@ def main():
     
     # Sidebar controls
     with st.sidebar:
-        st.header("⚙️ Settings")
+        st.header("Parameters")
         ticker = st.text_input("Ticker Symbol", value="AAPL")
         
         col1, col2 = st.columns(2)
@@ -1150,25 +1065,23 @@ def main():
                 index=2
             )
         
-        if st.button("🚀 Process Data", use_container_width=True):
+        if st.button("Process Data", use_container_width=True):
             with st.spinner("Processing data..."):
                 try:
                     results = st.session_state.model.process_timeframe(ticker, timeframe, period)
                     plot_data = st.session_state.model.get_plot_data()
                     stats = st.session_state.model.get_stats()
                     
-                    # Store results in session state
                     st.session_state.results = results
                     st.session_state.plot_data = plot_data
                     st.session_state.stats = stats
                     
-                    # Enable backtest button
                     st.session_state.data_loaded = True
                     st.success("Data processed successfully!")
                 except Exception as e:
                     st.error(f"Error processing data: {str(e)}")
         
-        if st.button("📈 Run Backtest", 
+        if st.button("Run Backtest", 
                     use_container_width=True,
                     disabled=not st.session_state.get('data_loaded', False)):
             with st.spinner("Running backtest..."):
@@ -1180,27 +1093,17 @@ def main():
                     st.error(f"Error running backtest: {str(e)}")
         
         # Disclaimer section
-        st.markdown(f"""
-        <div class="disclaimer">
-        <h4>⚠️ Disclaimer</h4>
-        <p>This tool is for educational and research purposes only. The analysis provided 
-        should not be considered as financial advice. Trading financial markets involves 
-        risk, and past performance is not indicative of future results. Always conduct 
-        your own research before making any trading decisions.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Author credit
-        st.markdown(f"""
-        <div class="author">
-        <p>Developed by Gebreal Mulugeta</p>
+        st.markdown("""
+        <div class="info-box">
+        <h4>Disclaimer</h4>
+        <p>This tool is for educational purposes only. Not financial advice.</p>
         </div>
         """, unsafe_allow_html=True)
     
     # Main content area
     if st.session_state.get('data_loaded', False):
         # Stats and metrics
-        st.subheader("📊 Performance Metrics")
+        st.header("Performance Metrics")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -1216,31 +1119,24 @@ def main():
                 stats = st.session_state.stats
                 create_metric("Avg Failure Magnitude", 
                              f"{stats['average_failure_magnitude']:.2f}%")
-                if stats['recent_failures']:
-                    create_metric("Recent Failures", 
-                                ", ".join([f"{x:.1f}%" for x in stats['recent_failures']]))
         
         with col3:
             if 'backtest_result' in st.session_state:
                 result = st.session_state.backtest_result
                 create_metric("Total Trades", result.total_trades)
-                create_metric("Profitable Trades", 
-                            result.profitable_trades,
-                            f"{result.win_rate:.1%}")
+                create_metric("Win Rate", f"{result.win_rate:.1%}")
         
         with col4:
             if 'backtest_result' in st.session_state:
                 result = st.session_state.backtest_result
                 create_metric("Avg Profit", f"{result.avg_profit:.2f}%")
                 create_metric("Max Drawdown", f"{result.max_drawdown:.2f}%")
-                create_metric("Sharpe Ratio", f"{result.sharpe_ratio:.2f}")
         
         # Plot area
-        st.subheader("📈 Analysis Charts")
+        st.header("Analysis Charts")
         if 'plot_data' in st.session_state and st.session_state.plot_data:
             plot_data = st.session_state.plot_data
             
-            # Create tabs for different plot views
             tab1, tab2 = st.tabs(["Price and Divergence", "Trade Analysis"])
             
             with tab1:
@@ -1255,28 +1151,26 @@ def main():
                     st.info("Run backtest to see trade analysis")
         
         # Results table
-        st.subheader("📋 Recent Results")
+        st.header("Recent Results")
         if 'results' in st.session_state and st.session_state.results is not None:
-            # Show last 200 results
             display_df = st.session_state.results.tail(200).copy()
             display_df['timestamp'] = display_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M')
             display_df['close'] = display_df['close'].round(2)
             display_df['Id_up'] = display_df['Id_up'].round(1)
             display_df['Id_down'] = display_df['Id_down'].round(1)
-            display_df['failure_magnitude'] = display_df['failure_magnitude'].round(2)
             
             st.dataframe(
-                display_df[['timestamp', 'close', 'Id_up', 'Id_down', 'is_failure', 'failure_magnitude']],
+                display_df[['timestamp', 'close', 'Id_up', 'Id_down', 'is_failure']],
                 height=400,
                 use_container_width=True
             )
         
         # Trade details
         if 'backtest_result' in st.session_state:
-            st.subheader("💼 Trade Details")
+            st.header("Trade Details")
             create_trade_table(st.session_state.backtest_result.trades)
     else:
-        st.info("👈 Enter settings and click 'Process Data' to begin analysis")
+        st.info("Configure settings and click 'Process Data' to begin")
 
 if __name__ == "__main__":
     main()
