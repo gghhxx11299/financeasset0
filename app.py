@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -281,6 +280,8 @@ class TradingAlgorithm:
         self.trades = []
         self.prev_id_up = None
         self.prev_id_down = None
+        self.prev_trend_up = None  # To track previous trend direction
+        self.prev_trend_down = None
     
     def process_candle(self, candle: Dict) -> Optional[Trade]:
         """Process a candle and return a Trade if one was closed"""
@@ -296,42 +297,42 @@ class TradingAlgorithm:
             self.prev_id_down = current_id_down
             return None
         
-        # Calculate direction changes with threshold to avoid noise
-        id_up_increased = current_id_up > (self.prev_id_up + 1.0)
-        id_up_decreased = current_id_up < (self.prev_id_up - 1.0)
-        id_down_increased = current_id_down > (self.prev_id_down + 1.0)
-        id_down_decreased = current_id_down < (self.prev_id_down - 1.0)
+        # Calculate current trend directions
+        current_trend_up = current_id_up > self.prev_id_up  # True if increasing
+        current_trend_down = current_id_down > self.prev_id_down  # True if increasing
         
         closed_trade = None
         
-        # Check for entry signals
+        # Check for entry signals based on trend changes
         if self.current_position is None:
-            # Buy signal: Id_down decreases and Id_up increases
-            if id_down_decreased and id_up_increased:
+            # Buy signal: Id_down starts decreasing (current < previous) AND Id_up starts increasing (current > previous)
+            if (current_trend_up != self.prev_trend_up and current_trend_up) and \
+               (current_trend_down != self.prev_trend_down and not current_trend_down):
                 self.enter_trade('long', candle)
             
-            # Sell signal: Id_up decreases and Id_down increases
-            elif id_up_decreased and id_down_increased:
+            # Sell signal: Id_up starts decreasing AND Id_down starts increasing
+            elif (current_trend_up != self.prev_trend_up and not current_trend_up) and \
+                 (current_trend_down != self.prev_trend_down and current_trend_down):
                 self.enter_trade('short', candle)
         
-        # Check for exit signals - Modified to close opposite positions
+        # Check for exit signals - when the trend reverses
         elif self.current_position == 'long':
-            # Exit long when a short signal occurs
-            if id_up_decreased and id_down_increased:
-                closed_trade = self.exit_trade(candle, 'opposite_signal')
-                # Enter short position immediately after closing long
-                self.enter_trade('short', candle)
+            # Exit long when Id_up starts decreasing or Id_down starts increasing
+            if (current_trend_up != self.prev_trend_up and not current_trend_up) or \
+               (current_trend_down != self.prev_trend_down and current_trend_down):
+                closed_trade = self.exit_trade(candle, 'trend_reversal')
         
         elif self.current_position == 'short':
-            # Exit short when a long signal occurs
-            if id_down_decreased and id_up_increased:
-                closed_trade = self.exit_trade(candle, 'opposite_signal')
-                # Enter long position immediately after closing short
-                self.enter_trade('long', candle)
+            # Exit short when Id_down starts decreasing or Id_up starts increasing
+            if (current_trend_down != self.prev_trend_down and not current_trend_down) or \
+               (current_trend_up != self.prev_trend_up and current_trend_up):
+                closed_trade = self.exit_trade(candle, 'trend_reversal')
         
         # Update previous values
         self.prev_id_up = current_id_up
         self.prev_id_down = current_id_down
+        self.prev_trend_up = current_trend_up
+        self.prev_trend_down = current_trend_down
         
         return closed_trade
     
@@ -340,6 +341,7 @@ class TradingAlgorithm:
         self.current_position = direction
         self.entry_price = candle['close']
         self.entry_time = candle['timestamp']
+        logger.info(f"Entered {direction} at {self.entry_price} on {self.entry_time}")
     
     def exit_trade(self, candle: Dict, reason: str) -> Trade:
         """Exit the current trade and record it"""
@@ -359,6 +361,8 @@ class TradingAlgorithm:
         )
         
         self.trades.append(trade)
+        logger.info(f"Exited {self.current_position} at {exit_price} on {candle['timestamp']}, PnL: {pnl:.2f}%")
+        
         self.current_position = None
         self.entry_price = None
         self.entry_time = None
@@ -388,6 +392,8 @@ class TradingAlgorithm:
         self.trades = []
         self.prev_id_up = None
         self.prev_id_down = None
+        self.prev_trend_up = None
+        self.prev_trend_down = None
     
     def get_results(self) -> BacktestResult:
         """Calculate backtest results"""
